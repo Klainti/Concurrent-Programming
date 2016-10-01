@@ -6,6 +6,7 @@
 volatile int read_in=0;  //read_in for writing,
 volatile int write_out=0; //write_out for reading
 volatile char *pipe; 
+volatile bool *read_or_write;
 int size_of_pipe;
 /**********************************/
 
@@ -15,7 +16,7 @@ int size_of_pipe;
 void pipe_init(int size){
     
     pipe = (char *)calloc(size,sizeof(char));
-    
+    read_or_write = (bool *)calloc(size,sizeof(bool));
 }
 
 //close pipe and free memory
@@ -23,6 +24,7 @@ void pipe_close(){
     
     read_in=-1; // indicator that pipe is closed
     free((void*) pipe);
+    free((void*) read_or_write);
 }
 
 /***********************************/
@@ -31,7 +33,7 @@ void pipe_close(){
 void pipe_write( char write_byte) {
 
     //grapse an uparxei xwros
-    while ( (write_out-read_in) == -1) {
+    while (*(read_or_write+write_out)!=false) {
         //oso den uparxei xwros, perimene
         // oso h diafora einai 1, den mporoume naw grapsoume
     }
@@ -45,10 +47,10 @@ void pipe_write( char write_byte) {
     
     //eleftherothike xwros, ara grapse
     pipe[write_out] = write_byte ;
-    loop = write_out == size_of_pipe-1 ? true : false;
-
+    *(read_or_write+write_out)=true;
+  
     //increment ton pointer
-    write_out = (write_out+1) % size_of_pipe;
+    write_out = ((write_out+1) % size_of_pipe);
     
     /*write_out = write_out++;//auksise 
     if ( write_out == size) {
@@ -64,15 +66,15 @@ int pipe_read(char *read_byte) {
     }
     
     //oso h diafora tous einai 0 , tote den diavazw, perimenw
-    while ( abs(write_out - read_in) == 0 ) {
-        
+    while (*(read_or_write+read_in)!=true ) {
     }
     
     //alliws mporei na diavasei
     *read_byte = *(pipe+read_in);
-    
+    *(read_or_write+read_in)=false;
+
     //auksanoume kata 1 tin thesi
-    read_in = (read_in+1) % size_of_pipe;
+    read_in = ((read_in+1) % size_of_pipe);
     
     return (1); 
     
@@ -93,7 +95,7 @@ int main(int argc,char *argv[]){
     //first create pipe
     pipe_init(size_of_pipe);
 
-    /*//check if it works
+    //check if it works
     for (i=0; i<5; i++){
         pipe_write('a'+i);
         if (pipe_read(&razoras)){
@@ -103,16 +105,25 @@ int main(int argc,char *argv[]){
             printf("Nope,debug it!\n");
         }
     }
-    */
+    
 
     pipe_write('a');
     pipe_write('b');
     pipe_read(&razoras);
+    printf("%c\n",razoras);
     pipe_write('c');
     pipe_write('d');
     pipe_write('e');
     pipe_write('f');
+    pipe_read(&razoras);
     pipe_write('g');
+    pipe_read(&razoras);
+    printf("%c\n",razoras);
+    pipe_write('i');
+    pipe_read(&razoras);
+    printf("%c\n",razoras);    
+    pipe_write('j');
+
 
     pipe_close();
     return(0);
