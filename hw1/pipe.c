@@ -8,9 +8,63 @@ volatile int write_out=0; //write_out for reading
 volatile char *pipe; 
 volatile bool *read_or_write;
 int size_of_pipe;
+
+//finish indicators for threads
+volatile int thread_read_done=0; 
+volatile int thread_write_done=0;
 /**********************************/
 
 /**********Functions***************/
+void pipe_init(int size);
+void pipe_close();
+void pipe_write(char write_byte);
+int  pipe_read(char *read_byte);
+
+void *thread_read();
+void *thread_write();
+/*********************************/
+
+int main(int argc,char *argv[]){
+
+    pthread_t thread1,thread2;
+    int read_iret,write_iret;
+
+
+    //check for paremeters
+    if (argc<3){
+        printf("Give K and N!\n");
+        return(0);
+    }
+
+    size_of_pipe = atoi(argv[1]);
+
+    //first create pipe
+    pipe_init(size_of_pipe);
+
+    read_iret= pthread_create(&thread1,NULL,thread_read,NULL);
+    if (read_iret){
+        fprintf(stderr,"Error - thread1() return code: %d\n",read_iret);
+        exit(EXIT_FAILURE);
+    } 
+
+    write_iret = pthread_create(&thread2,NULL,thread_write,NULL);
+    if (write_iret){
+        fprintf(stderr,"Error - thread2 return code: %d\n",write_iret);
+        exit(EXIT_FAILURE);
+    } 
+
+
+    printf("pthread_create() for thread_read return %d\n",read_iret);
+    printf("pthread_create() for thread_write return %d\n",read_iret);
+
+
+    //wait for thread to finish
+    while(!thread_read_done){};
+    while(!thread_write_done){};
+
+    pipe_close();
+    return(0);
+}
 
 //initialize pipe
 void pipe_init(int size){
@@ -27,104 +81,62 @@ void pipe_close(){
     free((void*) read_or_write);
 }
 
-/***********************************/
-
-
 void pipe_write( char write_byte) {
 
-    //grapse an uparxei xwros
+    //wait until the slot for write is available
     while (*(read_or_write+write_out)!=false) {
-        //oso den uparxei xwros, perimene
-        // oso h diafora einai 1, den mporoume naw grapsoume
     }
     
-    /* an o agwgos einai closed, tote h write apotugxanei
-     * if ( read_in == -1 ) {
-        printf("error\n");
-        exit(0);
-    }
-    */
-    
-    //eleftherothike xwros, ara grapse
+   
+    //free slot,write!
     pipe[write_out] = write_byte ;
     *(read_or_write+write_out)=true;
   
-    //increment ton pointer
+    //increment write_out
     write_out = ((write_out+1) % size_of_pipe);
-    
-    /*write_out = write_out++;//auksise 
-    if ( write_out == size) {
-        write_out = 0 ; //Kaname ena 'loop', ara twra eimaste kai pali sthn prwti thesi tou pinaka
-    }*/
 }
 
 int pipe_read(char *read_byte) {
     
-    // an o agwgos einai closed, tote h read epistrefei 0  
+    // pipe is closed
     if (read_in == -1 ) {
        return 0;
     }
     
-    //oso h diafora tous einai 0 , tote den diavazw, perimenw
+    //wait to write a byte
     while (*(read_or_write+read_in)!=true ) {
+        if (read_in == -1 ) {
+           return 0;
+        }
     }
     
-    //alliws mporei na diavasei
+    //read next byte 
     *read_byte = *(pipe+read_in);
     *(read_or_write+read_in)=false;
 
-    //auksanoume kata 1 tin thesi
+    //increment read in by 1
     read_in = ((read_in+1) % size_of_pipe);
     
     return (1); 
     
 }
 
-int main(int argc,char *argv[]){
+void *thread_read(){
+
+    char character;
+    while(pipe_read(&character)){
+        printf("%c\n",character);
+    }
+    thread_read_done = 1;
+}
+
+void *thread_write(){
 
     int i;
-    char razoras;
-    //check for right paremeters
-    if (argc<3){
-        printf("Give K and N!\n");
-        return(0);
-    }
-
-    size_of_pipe = atoi(argv[1]);
-
-    //first create pipe
-    pipe_init(size_of_pipe);
-
-    //check if it works
+    
     for (i=0; i<5; i++){
         pipe_write('a'+i);
-        if (pipe_read(&razoras)){
-            printf("%c\n",razoras);
-        }
-        else{
-            printf("Nope,debug it!\n");
-        }
     }
-    
-
-    pipe_write('a');
-    pipe_write('b');
-    pipe_read(&razoras);
-    printf("%c\n",razoras);
-    pipe_write('c');
-    pipe_write('d');
-    pipe_write('e');
-    pipe_write('f');
-    pipe_read(&razoras);
-    pipe_write('g');
-    pipe_read(&razoras);
-    printf("%c\n",razoras);
-    pipe_write('i');
-    pipe_read(&razoras);
-    printf("%c\n",razoras);    
-    pipe_write('j');
-
-
     pipe_close();
-    return(0);
+    thread_write_done=1;
 }
