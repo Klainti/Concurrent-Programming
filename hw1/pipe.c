@@ -12,6 +12,7 @@ int size_of_pipe;
 //finish indicators for threads
 volatile int thread_read_done=0; 
 volatile int thread_write_done=0;
+volatile int write_close=0;
 /**********************************/
 
 /**********Functions***************/
@@ -54,15 +55,16 @@ int main(int argc,char *argv[]){
     } 
 
 
-    printf("pthread_create() for thread_read return %d\n",read_iret);
-    printf("pthread_create() for thread_write return %d\n",read_iret);
+    //printf("pthread_create() for thread_read return %d\n",read_iret);
+    //printf("pthread_create() for thread_write return %d\n",read_iret);
 
 
     //wait for thread to finish
     while(!thread_read_done){};
     while(!thread_write_done){};
-
-    pipe_close();
+ 
+    free((void*) pipe);
+    free((void*) read_or_write);
     return(0);
 }
 
@@ -74,11 +76,8 @@ void pipe_init(int size){
 }
 
 //close pipe and free memory
-void pipe_close(){
-    
-    read_in=-1; // indicator that pipe is closed
-    free((void*) pipe);
-    free((void*) read_or_write);
+void pipe_close(){    
+    write_close = 1; // indicator that pipe is closed
 }
 
 void pipe_write( char write_byte) {
@@ -99,13 +98,13 @@ void pipe_write( char write_byte) {
 int pipe_read(char *read_byte) {
     
     // pipe is closed
-    if (read_in == -1 ) {
-       return 0;
-    }
+    //if (write_close == 1 ) {
+      // return 0;
+    //}
     
     //wait to write a byte
     while (*(read_or_write+read_in)!=true ) {
-        if (read_in == -1 ) {
+        if (write_close == 1 ) {
            return 0;
         }
     }
@@ -125,17 +124,18 @@ void *thread_read(){
 
     char character;
     while(pipe_read(&character)){
-        printf("%c\n",character);
+        printf("%c",character);
     }
     thread_read_done = 1;
 }
 
 void *thread_write(){
-
-    int i;
     
-    for (i=0; i<5; i++){
-        pipe_write('a'+i);
+    char byte_from_file;
+    byte_from_file = getchar();
+    while (byte_from_file!=EOF){
+        pipe_write(byte_from_file);
+        byte_from_file = getchar();
     }
     pipe_close();
     thread_write_done=1;
