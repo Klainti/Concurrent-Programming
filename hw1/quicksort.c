@@ -17,11 +17,12 @@ volatile int arr[]= {5,0,3,80,89,45,7,13,22,54};
 
 int main(){
     
-    int i,iret,arr_bound[2];
+    int i,iret,arr_bound[3];
     pthread_t main_thread;
 
     arr_bound[0]=0;
     arr_bound[1]=9;
+    arr_bound[2]=1;
 
     //create thread
     iret = pthread_create(&main_thread,NULL,quicksort,(void *)arr_bound);
@@ -30,7 +31,7 @@ int main(){
         return(EXIT_FAILURE);
     }
 
-    pthread_join(main_thread,NULL);
+    while(arr_bound[2]){};
 
     printf("Sorted array\n");
     for(i = 0; i < 10; i++)
@@ -41,16 +42,15 @@ int main(){
 }
 
 void *quicksort(void *ptr){
-    int pivot, i, j, temp,iret1,iret2;
-    int left_bound[2],right_bound[2];
-    int *bound;
-
-    bound = (int *)ptr;
-
-    int low = bound[0];
-    int high = bound[1];
-
+    int pivot, i, j, temp,iret1,iret2,low,high;
+    int left_bound_terminate[3],right_bound_terminate[3];// 0: low, 1:high, 2:thread terminated
+    int *bound; //typecast *ptr
     pthread_t left_thread,right_thread;
+     
+    bound = (int *)ptr;
+    low = bound[0];
+    high = bound[1];    
+   // printf("%d\n",*((int*)ptr + 3*sizeof(int)));
 
     if(low < high) {
         pivot = low; // select a pivot element
@@ -79,26 +79,30 @@ void *quicksort(void *ptr){
         arr[pivot] = temp;
         // Repeat quicksort for the two sub-arrays, one to the left of j
         // and one to the right of j
-        left_bound[0] = low;
-        left_bound[1] = j-1;
+        left_bound_terminate[0] = low;
+        left_bound_terminate[1] = j-1;
+        left_bound_terminate[2] = 1; //thread not terminated
 
-        right_bound[0] = j+1;
-        right_bound[1] = high;
+        right_bound_terminate[0] = j+1;
+        right_bound_terminate[1] = high;
+        right_bound_terminate[2] = 1; //thread not terminated
 
-        iret1 = pthread_create(&left_thread,NULL,quicksort,(void*) left_bound);
+        iret1 = pthread_create(&left_thread,NULL,quicksort,(void*) left_bound_terminate);
         if (iret1){
             fprintf(stderr,"Error - pthread_create() return: %d\n",iret1);
             return(NULL);
         }
 
-        iret2 = pthread_create(&right_thread,NULL,quicksort,(void*) right_bound);
+        iret2 = pthread_create(&right_thread,NULL,quicksort,(void*) right_bound_terminate);
         if (iret2){
             fprintf(stderr,"Error - pthread_create() return: %d\n",iret2);
             return(NULL);
         }
         
-        pthread_join(left_thread,NULL);
-        pthread_join(right_thread,NULL);
+        while(left_bound_terminate[2]){}; //wait until thread terminate
+        while(right_bound_terminate[2]){}; //wait until thread terminate
     }
+
+    bound[2]=0;
     return NULL;
 }

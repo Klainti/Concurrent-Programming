@@ -2,8 +2,11 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 int fd[2];
+bool read_done=false;
+bool write_done=false;
 
 void *read_pipe(void *ptr){
     
@@ -14,12 +17,13 @@ void *read_pipe(void *ptr){
     }
 
     close(fd[0]);
+    read_done=true;
+    return NULL;
 }
 
 void *write_pipe(void *ptr){
 
     char write_byte;
-    int i;
 
     write_byte = getchar();
     while (write_byte!=EOF){
@@ -28,6 +32,8 @@ void *write_pipe(void *ptr){
     }
 
     close(fd[1]);
+    write_done=true;
+    return NULL;
 }
 
 
@@ -50,8 +56,7 @@ int main(int argc,char *argv[]){
         return(EXIT_FAILURE);
     }
 
-    pthread_join(thread1,NULL);
-    pthread_join(thread2,NULL);
-
+    while(!read_done){};
+    while(!write_done){};
     return(0);
 }
