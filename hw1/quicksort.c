@@ -11,6 +11,7 @@ void *quicksort(void *ptr);
 
 #include <stdio.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdlib.h>
 
 volatile int arr[]= {5,0,3,80,89,45,7,13,22,54};
@@ -31,12 +32,12 @@ int main(){
         return(EXIT_FAILURE);
     }
 
-    while(arr_bound[2]){};
+    while(arr_bound[2]){sched_yield();};
 
     printf("Sorted array\n");
     for(i = 0; i < 10; i++)
         printf("%d ", arr[i]);
-    
+    printf("\n"); 
 
     return 0;
 }
@@ -99,8 +100,8 @@ void *quicksort(void *ptr){
             return(NULL);
         }
         
-        while(left_bound_terminate[2]){}; //wait until thread terminate
-        while(right_bound_terminate[2]){}; //wait until thread terminate
+        while(left_bound_terminate[2]){sched_yield();}; //wait until thread terminate
+        while(right_bound_terminate[2]){sched_yield();}; //wait until thread terminate
     }
 
     bound[2]=0;

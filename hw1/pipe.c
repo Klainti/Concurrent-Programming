@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <pthread.h>
+#include <sched.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
 /************Shared memory*********/
 volatile int read_in=0;  //read_in for writing,
 volatile int write_out=0; //write_out for reading
@@ -60,8 +62,12 @@ int main(int argc,char *argv[]){
 
 
     //wait for thread to finish
-    while(!thread_read_done){};
-    while(!thread_write_done){};
+    while(!thread_read_done){
+        sched_yield();
+    }
+    while(!thread_write_done){
+        sched_yield();
+    }
  
     free((void*) pipe);
     free((void*) read_or_write);
@@ -84,6 +90,7 @@ void pipe_write( char write_byte) {
 
     //wait until the slot for write is available
     while (*(read_or_write+write_out)!=false) {
+        sched_yield();
     }
     
    
@@ -107,6 +114,7 @@ int pipe_read(char *read_byte) {
         if (write_close == 1 ) {
            return 0;
         }
+        sched_yield();
     }
     
     //read next byte 
@@ -127,6 +135,7 @@ void *thread_read(){
         printf("%c",character);
     }
     thread_read_done = 1;
+    return NULL;
 }
 
 void *thread_write(){
@@ -139,4 +148,5 @@ void *thread_write(){
     }
     pipe_close();
     thread_write_done=1;
+    return NULL;
 }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sched.h>
 #include <unistd.h>
 #include <stdbool.h>
 
@@ -56,7 +57,7 @@ int main(int argc,char *argv[]){
         return(EXIT_FAILURE);
     }
 
-    while(!read_done){};
-    while(!write_done){};
+    while(!read_done){sched_yield();};
+    while(!read_done){sched_yield();};
     return(0);
 }
