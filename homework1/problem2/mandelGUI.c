@@ -3,6 +3,8 @@
 #include <string.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <stdbool.h>
+#include <pthread.h>
 
 #include "mandelCore.h"
 
@@ -16,17 +18,27 @@ static unsigned long curC;
 static Window win;
 static GC gc;
 
+volatile bool *worker_activate;
+
+struct job_parameters{
+  mandel_Pars *pars;
+  int maxIterations;
+  int *res;
+  int result_available;
+};
+
+volatile struct job_parameters *worker_parameters;
 /* basic win management rountines */
 
 static void openDisplay() {
-  if (dsp == NULL) { 
-    dsp = XOpenDisplay(NULL); 
-  } 
+  if (dsp == NULL) {
+    dsp = XOpenDisplay(NULL);
+  }
 }
 
 static void closeDisplay() {
-  if (dsp != NULL) { 
-    XCloseDisplay(dsp); 
+  if (dsp != NULL) {
+    XCloseDisplay(dsp);
     dsp=NULL;
   }
 }
@@ -40,7 +52,7 @@ void openWin(const char *title, int width, int height) {
   whiteC = WhitePixel(dsp, DefaultScreen(dsp));
   blackC = BlackPixel(dsp, DefaultScreen(dsp));
   curC = blackC;
- 
+
   win = XCreateSimpleWindow(dsp, DefaultRootWindow(dsp), 0, 0, WinW, WinH, 0, blackC, whiteC);
 
   sh.flags=PSize|PMinSize|PMaxSize;
@@ -114,11 +126,16 @@ char *pickColor(int v, int maxIterations) {
   }
 }
 
+void* worker_thread(void* args);
+
 int main(int argc, char *argv[]) {
   mandel_Pars pars,*slices;
   int i,j,x,y,nofslices,maxIterations,level,*res;
   int xoff,yoff;
   long double reEnd,imEnd,reCenter,imCenter;
+  pthread_t *threads;
+  int iret;
+  int workers_done=0;
 
   printf("\n");
   printf("This program starts by drawing the default Mandelbrot region\n");
@@ -130,7 +147,7 @@ int main(int argc, char *argv[]) {
 
   pars.reSteps = WinW; /* never changes */
   pars.imSteps = WinH; /* never changes */
- 
+
   /* default mandelbrot region */
 
   pars.reBeg = (long double) -2.0;
@@ -144,16 +161,16 @@ int main(int argc, char *argv[]) {
   scanf("%d",&maxIterations);
   printf("enter no of slices: ");
   scanf("%d",&nofslices);
-  
+
   /* adjust slices to divide win height */
 
   while (WinH % nofslices != 0) { nofslices++;}
 
   /* allocate slice parameter and result arrays */
-  
+
   slices = (mandel_Pars *) malloc(sizeof(mandel_Pars)*nofslices);
   res = (int *) malloc(sizeof(int)*pars.reSteps*pars.imSteps);
- 
+
   /* open window for drawing results */
 
   openDisplay();
@@ -161,46 +178,82 @@ int main(int argc, char *argv[]) {
 
   level = 1;
 
+  //Allocate memory for workers
+  worker_activate = (bool*) calloc(nofslices, sizeof(bool*));
+  worker_parameters = (struct job_parameters*) malloc(nofslices*sizeof(struct job_parameters));
+
+  threads = (pthread_t*) malloc(nofslices * sizeof(pthread_t));
+
+    //Create worker threads
+    for (i=0; i<nofslices; i++){
+      int *arg = malloc(sizeof(*arg));
+      *arg=i;
+      iret = pthread_create(threads+i, NULL, worker_thread, (void*) arg);
+      if (iret){
+        fprintf(stderr, "ERROR pthread create return: %d\n", iret);
+        return(EXIT_FAILURE);
+      }
+    }
+
   while (1) {
 
     clearWin();
 
     mandel_Slice(&pars,nofslices,slices);
-    
+
     y=0;
     for (i=0; i<nofslices; i++) {
       printf("starting slice nr. %d\n",i+1);
-      mandel_Calc(&slices[i],maxIterations,&res[i*slices[i].imSteps*slices[i].reSteps]);
+      //mandel_Calc(&slices[i],maxIterations,&res[i*slices[i].imSteps*slices[i].reSteps]);
+      worker_parameters[i].pars = &slices[i];
+      worker_parameters[i].result_available=0;
+      worker_parameters[i].maxIterations = maxIterations;
+      worker_parameters[i].res = &res[i*slices[i].imSteps*slices[i].reSteps];
       printf("done\n");
-      for (j=0; j<slices[i].imSteps; j++) {
-	for (x=0; x<slices[i].reSteps; x++) {
-          setColor(pickColor(res[y*slices[i].reSteps+x],maxIterations));
-          drawPoint(x,y);
+    }
+
+    for (i=0; i<nofslices; i++){
+        worker_activate[i]=true;
+    }
+    
+    while(workers_done<nofslices){
+        for (i=0; i<nofslices; i++){
+            if(worker_parameters[i].result_available){
+                for (j=0; j<slices[i].imSteps; j++) {
+	                for (x=0; x<slices[i].reSteps; x++) {
+                        setColor(pickColor(res[y*slices[i].reSteps+x],maxIterations));
+                        drawPoint(x,y);
+                    }
+                    y++;
+                }
+                worker_parameters[i].result_available=0;
+                workers_done++;
+                printf("Workers done: %d\n",workers_done);    
+            }
         }
-        y++;
-      }
-    } 
+    }
+    workers_done=0;
 
     /* get next focus/zoom point */
-    
+
     getMouseCoords(&x,&y);
     xoff = x;
     yoff = WinH-y;
-    
+
     /* adjust region and zoom factor  */
-    
+
     reCenter = pars.reBeg + xoff*pars.reInc;
     imCenter = pars.imBeg + yoff*pars.imInc;
     pars.reInc = pars.reInc*ZoomStepFactor;
     pars.imInc = pars.imInc*ZoomStepFactor;
     pars.reBeg = reCenter - (WinW/2)*pars.reInc;
     pars.imBeg = imCenter - (WinH/2)*pars.imInc;
-    
+
     maxIterations = maxIterations*ZoomIterationFactor;
     level++;
 
-  } 
-  
+  }
+
   /* never reach this point; for cosmetic reasons */
 
   free(slices);
@@ -209,4 +262,16 @@ int main(int argc, char *argv[]) {
   closeWin();
   closeDisplay();
 
+}
+
+void* worker_thread(void* args){
+  int *id = (int*) args;
+  printf("id=%d\n",*id);
+  
+  while (1){
+    while(!worker_activate[*id]){};
+    mandel_Calc(worker_parameters[*id].pars,worker_parameters[*id].maxIterations,worker_parameters[*id].res);
+    worker_activate[*id]=false;
+    worker_parameters[*id].result_available=1;
+  }
 }
