@@ -219,6 +219,8 @@ int main(int argc, char *argv[]) {
     while(workers_done<nofslices){
         for (i=0; i<nofslices; i++){
             if(worker_parameters[i].result_available){
+                y = i*slices[i].imSteps;
+                printf("y=%d\n",y);
                 for (j=0; j<slices[i].imSteps; j++) {
 	                for (x=0; x<slices[i].reSteps; x++) {
                         setColor(pickColor(res[y*slices[i].reSteps+x],maxIterations));
@@ -228,7 +230,7 @@ int main(int argc, char *argv[]) {
                 }
                 worker_parameters[i].result_available=0;
                 workers_done++;
-                printf("Workers done: %d\n",workers_done);    
+                //printf("Workers done: %d\n",workers_done);    
             }
         }
     }
