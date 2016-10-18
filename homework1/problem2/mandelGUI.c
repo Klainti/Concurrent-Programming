@@ -180,13 +180,30 @@ int main(int argc, char *argv[]) {
 
   //Allocate memory for workers
   worker_activate = (bool*) calloc(nofslices, sizeof(bool*));
+  if (worker_activate==NULL){
+      printf("Error,dynamic memory %d line\n",__LINE__);
+      return(EXIT_FAILURE);
+  }
+
   worker_parameters = (struct job_parameters*) malloc(nofslices*sizeof(struct job_parameters));
+  if (worker_parameters==NULL){
+      printf("Error, dynamic memory %d line\n",__LINE__);
+      return(EXIT_FAILURE);
+  }
 
   threads = (pthread_t*) malloc(nofslices * sizeof(pthread_t));
+  if (threads==NULL){
+      printf("Error, dynamic memory %d line\n",__LINE__);
+      return(EXIT_FAILURE);
+  }
 
     //Create worker threads
     for (i=0; i<nofslices; i++){
       int *arg = malloc(sizeof(*arg));
+      if (arg==NULL){
+        printf("Error, dynamic memory %d line\n",__LINE__);
+        return(EXIT_FAILURE);
+      }
       *arg=i;
       iret = pthread_create(threads+i, NULL, worker_thread, (void*) arg);
       if (iret){
@@ -204,7 +221,6 @@ int main(int argc, char *argv[]) {
     y=0;
     for (i=0; i<nofslices; i++) {
       printf("starting slice nr. %d\n",i+1);
-      //mandel_Calc(&slices[i],maxIterations,&res[i*slices[i].imSteps*slices[i].reSteps]);
       worker_parameters[i].pars = &slices[i];
       worker_parameters[i].result_available=0;
       worker_parameters[i].maxIterations = maxIterations;
@@ -230,7 +246,6 @@ int main(int argc, char *argv[]) {
                 }
                 worker_parameters[i].result_available=0;
                 workers_done++;
-                //printf("Workers done: %d\n",workers_done);    
             }
         }
     }

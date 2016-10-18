@@ -45,6 +45,9 @@ int main(){
 
     //The numbers to sort
     arr = (int*) calloc(tableSize, sizeof(int));
+    if (arr==NULL){
+        printf("Error, dynamic memory %d line\n",__LINE__);
+    }
     printf("Give %d numbers:", tableSize);
     for (i=0; i<tableSize; i++){
       scanf("%d", arr+i);
@@ -62,20 +65,12 @@ int main(){
     arr_bound[2]=1;
     arr_bound[3]= 1; //depth of recursion
 
-/*TODO
-  Remove the pthread_create from main, [OK]
-  read the numbers [OK]
-  check with the number of recursion
-  */
-
     //create thread
     iret = pthread_create(&main_thread,NULL,quicksort,(void *)arr_bound);
     if (iret){
         fprintf(stderr,"Error - pthread_create() return: %d\n",iret);
         return(EXIT_FAILURE);
     }
-
-    //quicksort((void *)arr_bound);
 
     while(arr_bound[2]){sched_yield();};
 
@@ -84,6 +79,8 @@ int main(){
         printf("%d ", arr[i]);
     printf("\n");
 
+    free((void*)arr);
+    return(0);
 }
 
 void *quicksort(void *ptr){
@@ -133,11 +130,6 @@ void *quicksort(void *ptr){
         right_bound_terminate[1] = high;
         right_bound_terminate[2] = 1; //thread not terminated
 
-
-        // printf("Sorting Array\n");
-        // for(i = 0; i < tableSize; i++)
-        //     printf("%d ", arr[i]);
-        // printf("\n");
 
         if (currentDepth+1 <= nofRecursion){
           printf("Current number of Recursion: %d\n", currentDepth);

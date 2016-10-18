@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define CLOSED_PIPE = 2;
-
 /************Shared memory*********/
 volatile int in = 0;  //read_in for writing,
 volatile int out = 0; //write_out for reading
@@ -62,11 +60,6 @@ int main(int argc,char *argv[]){
         exit(EXIT_FAILURE);
     }
 
-
-    //printf("pthread_create() for thread_read return %d\n",read_iret);
-    //printf("pthread_create() for thread_write return %d\n",read_iret);
-
-
     //wait for thread to finish
     while(!thread_read_done){
         sched_yield();
@@ -82,9 +75,12 @@ int main(int argc,char *argv[]){
 //initialize pipe
 void pipe_init(int size){
     pipe = (char *)calloc(size,sizeof(char));
+    if (pipe==NULL){
+        printf("Error-dynamic memory at %d line\n",__LINE__);
+    }
 }
 
-//close pipe and free memory
+//close pipe
 void pipe_close(){
     pipe_is_closed = 1; // indicator that pipe is closed
 }
@@ -105,55 +101,30 @@ bool isEmpty(){
 
 void pipe_write(char write_byte) {
   while (isFull()){
-    //printf("\nLoop:in = %d", in);
     sched_yield();
   }
-  //if (!notFirstWrite){ notFirstWrite = true; }
-  //printf("\nin = %d", in);
   pipe[in] = write_byte;
   in = (in + 1) % size_of_pipe;
-  //printf(" -> in = %d", in);
 }
 
 int pipe_read(char *read_byte) {
+
+  //check for closed pipe  
   if (pipe_is_closed == 1){
     return 0;
   }
+
   while (isEmpty()){
-    //printf("\nLoop:out = %d", out);
     if (pipe_is_closed == 1){
       return 0;
     }
     sched_yield();
   }
-  //printf("\nout = %d", out);
+
   *read_byte = pipe[out];
   out = (out + 1) % size_of_pipe;
-  //printf(" -> out = %d", out);
 
   return(1);
-    // // pipe is closed
-    // //if (write_close == 1 ) {
-    //   // return 0;
-    // //}
-    //
-    // //wait to write a byte
-    // while (*(read_or_write+read_in)!=true ) {
-    //     if (write_close == 1 ) {
-    //        return 0;
-    //     }
-    //     sched_yield();
-    // }
-    //
-    // //read next byte
-    // *read_byte = *(pipe+read_in);
-    // *(read_or_write+read_in)=false;
-    //
-    // //increment read in by 1
-    // read_in = ((read_in+1) % size_of_pipe);
-    //
-    // return (1);
-
 }
 
 void *thread_read(){
