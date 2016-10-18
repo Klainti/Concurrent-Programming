@@ -8,6 +8,7 @@
 volatile int in = 0;  //read_in for writing,
 volatile int out = 0; //write_out for reading
 volatile int pipe_is_closed = 0;
+volatile int free_space = 0; //indicator for pipe_close to free pipe
 volatile bool notFirstWrite = false;
 volatile char *pipe;
 int size_of_pipe;
@@ -68,7 +69,6 @@ int main(int argc,char *argv[]){
         sched_yield();
     }
 
-    free((void*) pipe);
     return(0);
 }
 
@@ -83,6 +83,10 @@ void pipe_init(int size){
 //close pipe
 void pipe_close(){
     pipe_is_closed = 1; // indicator that pipe is closed
+    while(!free_space){}; //wait for read_pipe to read all bytes
+    free((void*) pipe);
+    thread_read_done=1; //notify main threads done 
+    thread_write_done=1;
 }
 
 bool isFull(){
@@ -109,11 +113,6 @@ void pipe_write(char write_byte) {
 
 int pipe_read(char *read_byte) {
 
-  //check for closed pipe  
-  if (pipe_is_closed == 1){
-    return 0;
-  }
-
   while (isEmpty()){
     if (pipe_is_closed == 1){
       return 0;
@@ -133,7 +132,14 @@ void *thread_read(){
     while(pipe_read(&charRead)){
         printf("%c",charRead);
     }
-    thread_read_done = 1;
+
+    //check for bytes in pipe after close
+    while(in!=out){
+        printf("%c",pipe[out]);
+        out = (out + 1)% size_of_pipe;
+    }
+    
+    free_space=1; //notify close that pipe_read done!
     return NULL;
 }
 
@@ -145,7 +151,7 @@ void *thread_write(){
         pipe_write(charWrite);
         charWrite = getchar();
     }
+
     pipe_close();
-    thread_write_done=1;
     return NULL;
 }
