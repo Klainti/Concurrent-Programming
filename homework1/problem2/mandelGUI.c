@@ -220,12 +220,10 @@ int main(int argc, char *argv[]) {
 
     y=0;
     for (i=0; i<nofslices; i++) {
-      printf("starting slice nr. %d\n",i+1);
       worker_parameters[i].pars = &slices[i];
       worker_parameters[i].result_available=0;
       worker_parameters[i].maxIterations = maxIterations;
       worker_parameters[i].res = &res[i*slices[i].imSteps*slices[i].reSteps];
-      printf("done\n");
     }
 
     for (i=0; i<nofslices; i++){
@@ -236,7 +234,6 @@ int main(int argc, char *argv[]) {
         for (i=0; i<nofslices; i++){
             if(worker_parameters[i].result_available){
                 y = i*slices[i].imSteps;
-                printf("y=%d\n",y);
                 for (j=0; j<slices[i].imSteps; j++) {
 	                for (x=0; x<slices[i].reSteps; x++) {
                         setColor(pickColor(res[y*slices[i].reSteps+x],maxIterations));
@@ -283,7 +280,6 @@ int main(int argc, char *argv[]) {
 
 void* worker_thread(void* args){
   int *id = (int*) args;
-  printf("id=%d\n",*id);
   
   while (1){
     while(!worker_activate[*id]){};

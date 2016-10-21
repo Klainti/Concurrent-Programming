@@ -15,7 +15,7 @@ void *quicksort(void *ptr);
 #include <stdlib.h>
 #include <math.h>
 
-volatile int *arr;  //{5,0,3,80,89,45,7,13,22,54};
+volatile int *arr;
 int tableSize;
 volatile int nofRecursion;
 
@@ -25,7 +25,6 @@ int main(){
     pthread_t main_thread;
 
     //The size of the table
-    printf("Give the size of the table: ");
     do{
       scanf ("%d", &tableSize);
       if (tableSize <= 0){
@@ -34,31 +33,22 @@ int main(){
     }while (tableSize <= 0);
 
     //The number of the recursion
-    printf("Give the number of recursion:");
     do{
       scanf ("%d", &nofRecursion);
       if (nofRecursion <= 0){
         printf("The number of recursion must not be negative or zero.\nPlease try again...");
       }
     }while (nofRecursion <= 0);
-    printf("Number of Recursion: %d\n", nofRecursion);
 
     //The numbers to sort
     arr = (int*) calloc(tableSize, sizeof(int));
     if (arr==NULL){
         printf("Error, dynamic memory %d line\n",__LINE__);
     }
-    printf("Give %d numbers:", tableSize);
+
     for (i=0; i<tableSize; i++){
       scanf("%d", arr+i);
     }
-
-    printf("Unsorted array\n");
-    for(i = 0; i < tableSize; i++)
-        printf("%d ", arr[i]);
-    printf("\n");
-
-
 
     arr_bound[0]=0;
     arr_bound[1]=tableSize-1;
@@ -132,7 +122,6 @@ void *quicksort(void *ptr){
 
 
         if (currentDepth+1 <= nofRecursion){
-          printf("Current number of Recursion: %d\n", currentDepth);
           //Increase the depth of the recursion.
 
           left_bound_terminate[3] = currentDepth + 1;
