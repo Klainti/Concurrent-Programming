@@ -1,5 +1,7 @@
 4 projects for concurrent programming
 
-hw1,hw2,hw3,hw4
+homework1 ----> Sync with spin at while loops
+
+homework2 ----> Semaphores/thread-mutexes
 
 Each folder includes assignment and solution!
