@@ -17,11 +17,15 @@ void *passenger();
 int main(int argc,char *argv[]){
 
     pthread_t train_thread,passenger_thread;
-    int iret,i;
+    int iret,i,total_passengers,timing;
 
+    if (argc<3){
+        debug_e("Give N and total number of passengers");
+        return(EXIT_FAILURE);
+    }
 
-    printf("Give N:");
-    scanf("%d", &N);
+    N = atoi(argv[1]);
+    total_passengers = atoi(argv[2]);
 
     debug("Init start_train at 0");
     pthread_mutex_init(&start_train, NULL);
@@ -37,7 +41,9 @@ int main(int argc,char *argv[]){
         return(EXIT_FAILURE);
     }
 
-    for (i=0; i<N+4; i++){
+    for (i=0; i<total_passengers; i++){
+        scanf("%d",&timing);
+        sleep(timing);
         iret = pthread_create(&passenger_thread,NULL,&passenger,NULL);
         if (iret){
             debug_e("pthread_create for train fail");
