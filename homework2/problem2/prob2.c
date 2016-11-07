@@ -17,8 +17,13 @@ void *car(void *arg);
 
 int main(int argc,char *argv[]){
 
-    int i,iret,color_car;
+    int i,iret,*color_car,time_car;
     pthread_t car_thread;
+
+    if (argc<3){
+        debug_e("Give size of the brigde and number of cars!");
+        return(EXIT_FAILURE);
+    }
 
     debug("Init semaphores");
     pthread_mutex_init(&main_done,NULL);
@@ -29,18 +34,20 @@ int main(int argc,char *argv[]){
     pthread_mutex_init(&queue[1],NULL);
     pthread_mutex_lock(&queue[1]);
     debug("Done with initialize");
+    
+    carsBrigde = atoi(argv[1]);
+    nOfcars = atoi(argv[2]);
 
-    printf("Give size of the bridge:");
-    scanf("%d",&carsBrigde);
+    color_car = (int *)calloc(nOfcars,sizeof(int));
+    if (color_car==NULL){
+        debug_e("Callc failed!");
+        return(EXIT_FAILURE);
+    }
 
-    printf("Give number of cars:");
-    scanf("%d",&nOfcars);
-
-    srand(time(NULL));
     for (i=0; i<nOfcars; i++){
-        color_car = rand() % 2;
-        //debug_e("New car: %s", color_car ? "Red" : "Blue");
-        iret = pthread_create(&car_thread,NULL,&car,(void *) &color_car);
+        scanf("%d %d",color_car+i,&time_car);
+        sleep(time_car);
+        iret = pthread_create(&car_thread,NULL,&car,(void *) (color_car+i));
         if (iret){
             debug_e("pthread failed");
             return(EXIT_FAILURE);
@@ -55,7 +62,7 @@ int main(int argc,char *argv[]){
 void *car(void *arg){
 
     int side = *(int *)arg;
-    debug("Begin side: %d",side);
+    debug("Begin side: %s",side ? "Blue" : "Red");
 
     debug("Lock mtx");
     pthread_mutex_lock(&mtx);
@@ -70,14 +77,14 @@ void *car(void *arg){
         pthread_mutex_lock(&queue[side]);
         debug("Check for crossing the road--> cross:%d and blocked:%d",crossing[side],blocked[side]);
         if (blocked[side]>0 && crossing[side]<carsBrigde){//check for crossing the road
-            debug("Car from side:%d is going to cross the road",side);
+            debug("Car from side:%s is going to cross the road",side ? "Blue" : "Red");
             blocked[side]--;
             crossing[side]++;
             debug("Unlock queue[%d]",side); 
             pthread_mutex_unlock(&queue[side]); //notify other car to cross the bridge
         }
         else{
-            debug("Can't cross the road,side:%d,Unlock mtx",side);
+            debug("Can't cross the road,side:%s,Unlock mtx",side ? "Blue" : "Red");
             pthread_mutex_unlock(&mtx);
             pthread_mutex_lock(&queue[side]);
             blocked[side]--;
@@ -85,14 +92,14 @@ void *car(void *arg){
         }
     }
     else{
-        debug("No cars from opposite side %d",side);
+        debug("No cars from opposite side");
         if (crossing[side]<carsBrigde){
             crossing[side]++;
             debug("Unlock mtx--> crossing:%d",crossing[side]);
             pthread_mutex_unlock(&mtx);
         }
         else{
-            debug("Bridge full , side:%d",side);
+            debug("Bridge full , side:%s",side ? "Blue" : "Red");
             blocked[side]++;
             debug("Blocked: %d",blocked[side]);
             debug("Unlock mtx");
@@ -101,14 +108,14 @@ void *car(void *arg){
             pthread_mutex_lock(&queue[side]);
             debug("Check for crossing the road--> cross:%d and blocked:%d",crossing[side],blocked[side]);
             if (blocked[side]>0 && crossing[side]<carsBrigde){//check for crossing the road
-                debug("Car from side:%d is going to cross the road",side);
+                debug("Car from side:%s is going to cross the road",side ? "Blue" : "Red");
                 blocked[side]--;
                 crossing[side]++;
                 debug("Unlock queue[%d]",side); 
                 pthread_mutex_unlock(&queue[side]); //notify other car to cross the bridge
             }
             else{
-                debug("Can't cross the road,side:%d,Unlock mtx",side);
+                debug("Can't cross the road,side:%s,Unlock mtx",side ? "Blue" : "Red");
                 pthread_mutex_unlock(&mtx);
                 pthread_mutex_lock(&queue[side]);
                 blocked[side]--;
@@ -122,7 +129,7 @@ void *car(void *arg){
 
 
     pthread_mutex_lock(&mtx);
-    debug("Enter CS/exit code");
+    debug("Enter Exit code");
     crossing[side]--;
     debug("Cars still in the bridge: %d",crossing[side]);
     if (crossing[side]==0){
@@ -134,13 +141,8 @@ void *car(void *arg){
             debug("Last car, notify same side");
             pthread_mutex_unlock(&queue[side]);
         }
-        /*
-        else{
-            debug("No cars on the road!");
-            pthread_mutex_unlock(&mtx);
-        }
-        */
-    }
+   }
+
     debug("Unlock mtx/exit code");
     car_crossed++;
     if (car_crossed==nOfcars){
