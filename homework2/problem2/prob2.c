@@ -21,7 +21,7 @@ int main(int argc,char *argv[]){
     pthread_t car_thread;
 
     if (argc<3){
-        debug_e("Give size of the brigde and number of cars!");
+        debug_e("Give size of the bridge and number of cars!");
         return(EXIT_FAILURE);
     }
 
@@ -56,6 +56,10 @@ int main(int argc,char *argv[]){
 
     pthread_mutex_lock(&main_done);
     debug("Exit Main");
+    pthread_mutex_destroy(&main_done);
+    pthread_mutex_destroy(&mtx);
+    pthread_mutex_destroy(&queue[1]);
+    pthread_mutex_destroy(&queue[0]);
     return(0);
 }
 
