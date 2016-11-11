@@ -1,6 +1,6 @@
 
 all: 
-	gcc mandelGUI.c mandelCore.c -o mandelGUI -L /usr/X11R6/lib -lX11 -pthread
+	gcc mandelGUI.c mandelCore.c -o mandelGUI -L /usr/X11R6/lib -lX11 -lpthread
 
 clean: 
-	rm -f prob2
+	rm -f mandelGUI

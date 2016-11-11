@@ -63,7 +63,7 @@ void *train(){
         debug("Locking train");
         pthread_mutex_lock(&start_train);
         debug("Train is about to begin");
-        sleep(5);
+        sleep(2);
         debug("Ride is over");
         pthread_mutex_unlock(&debarkation);
     }
