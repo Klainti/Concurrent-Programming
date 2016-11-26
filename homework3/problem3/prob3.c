@@ -6,6 +6,12 @@
 
 #define NOT_CHANNEL -1
 
+typedef struct{
+	int nOfProducers;
+	int nOfConsumers;
+	char channels[nOfProducers+nOfConsumers];
+}buffer_args;
+
 typedef struct {
 
     //condition for send and receive a msg
@@ -48,25 +54,42 @@ void *buffer_thread(void *arg);
 
 int main(int argc,char *argv[]){
 
-    int iret;
-    pthread_t t1,t2,t3;
+    int i, bufSize, iret;
+    pthread_t tp,tc,tb;
+    buffer_args *arguments;
+
+    printf("Enter the number of producers and consumers: ");
+    scanf("%d %d", &arguments.nOfProducers, &arguments.nOfConsumers);
+
+    printf("Enter the size of the buffer: ");
+    scanf("%d %d", &bufSize);
 
     //initialize monitor and csp channels!
     pthread_mutex_init(&monitor,NULL);
-    cc = (csp_ctxt *) malloc(1*sizeof(csp_ctxt));
-    if (cc==NULL){debug_e("Calloc failed!");}
-    csp_init(cc,1);
+    cc = (csp_ctxt *) malloc(sizeof(csp_ctxt));
+    if (cc==NULL){debug_e("Malloc failed!");}
+    csp_init(cc, arguments.nOfProducers + arguments.nOfConsumers);
 
-    iret = pthread_create(&t1,NULL,&sender_thread,NULL);
+    iret = pthread_create(&tb,NULL,&buffer_thread, (void *) &bufSize);
     if (iret){
         debug_e("pthead_create error");
         return(EXIT_FAILURE);
     }
 
-    iret = pthread_create(&t2,NULL,&receiver_thread,NULL);
-    if (iret){
-        debug_e("pthead_create error");
-        return(EXIT_FAILURE);
+    for (i = 0; i < arguments.nOfProducers; i++){
+    	iret = pthread_create(&tp,NULL,&producer_thread, (void *) &i);
+    	if (iret){
+        	debug_e("pthead_create error");
+        	return(EXIT_FAILURE);
+    	}
+    }
+    
+    for (i = 0; i < arguments.nOfConsumers; i++){
+    	iret = pthread_create(&tc,NULL,&consumer_thread,(void *) &(arguments.nOfProducers + i));
+    	if (iret){
+        	debug_e("pthead_create error");
+        	return(EXIT_FAILURE);
+    	}
     }
 
     while(1);
@@ -75,25 +98,67 @@ int main(int argc,char *argv[]){
 }
 
 void *buffer_thread(void *arg){
-    
-    int *chans = (int *)arg;
-    int len = sizeof(chans)/sizeof(int);
-    int channel;
-    char request;
+	int n = 0, in = 0, out = 0;
+	int bufSize =  *(int *) arg;
+	char request;
+	int *channels;
+	int *channelsP[arguments.nOfProducers] = {0, 1, 2};
+	int *channelsC[arguments.nOfConsumers] = {3, 4, 5};
 
-    while(1){
-        //check which channel sent
-        pthread_mutex_lock(&monitor);
-        channel=csp_wait(cc,chans,len);
-        pthread_mutex_unlock(&monitor);
+	while(1){
+		if (n > 0 && n < bufSize){
+			pthread_mutex_lock(&monitor);
+    		int len = arguments.nOfProducers + arguments.nOfConsumers;
+    		csp_wait(cc, channels, len);
+    		pthread_mutex_unlock(&monitor);
 
-        //receive the msg from channel
-        pthread_mutex_lock(&monitor);
-        csp_recv(cc,channel,&request);
-        pthread_mutex_unlock(&monitor);
+    		pthread_mutex_lock(&monitor);
+         	csp_recv(cc,channels,&request);
+    	    pthread_mutex_unlock(&monitor);
+    	    if (request == "P"){
+    	    	//Producer
+    	    	in = (in + 1) % bufSize;
+    	    	n++;
+    	    }
+    	    else if (request == "G"){
+    	    	//Consumer
+    	    	out = (out + 1) % bufSize;
+    	    	n--;
+    	    }
+    	}
+    	else if (n == 0){
+    		//buffer is empty
+    		//Only producers are allowed
+    		csp_wait(cc, channelsP, arguments.nOfProducers);
+    		in = (in + 1) % bufSize;
+    		n++;
+    	}
+    	else{
+    		//Buffer is full
+    		//Only consumers are allowed
+    		csp_wait(cc, channelsC, arguments.nOfConsumers);
+    		out = (out + 1) & bufSize;
+    		n++;
+    	}
+	}
+    // int *chans = (int *)arg;
+    // int len = sizeof(chans)/sizeof(int);
+    // int channel;
+    // char request;
+
+    // while(1){
+    //     //check which channel sent
+    //     pthread_mutex_lock(&monitor);
+    //     channel=csp_wait(cc,chans,len);
+    //     pthread_mutex_unlock(&monitor);
+
+    //     //receive the msg from channel
+    //     pthread_mutex_lock(&monitor);
+    //     csp_recv(cc,channel,&request);
+    //     pthread_mutex_unlock(&monitor);
 
 
-    }
+    // }
 
 }
 
