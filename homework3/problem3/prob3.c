@@ -4,15 +4,20 @@
 #include <stdbool.h>
 #include "debug.h"
 
+#define NOT_CHANNEL -1
+
 typedef struct {
 
     //condition for send and receive a msg
-    pthread_cond_t send_cond;
+    pthread_cond_t *send_cond;
     pthread_cond_t recv_cond;
 
     //checks for a msg 
     bool sent;
     bool recv;
+
+    //all channels waiting in csp_wait!
+    int *waiting_chans;
 
     //msg
     char *data;
@@ -33,14 +38,18 @@ int csp_send(csp_ctxt *cc, int chan, char *msg);
 //Receive a msg from chan
 int csp_recv(csp_ctxt *cc,int chan,char *msg);
 
+//Wait till a channel send msg.Return the channel 
+int csp_wait(csp_ctxt *cc, int chans[], int len);
+
 //function threads!
-void *sender_thread(void *arg);
-void *receiver_thread(void *arg);
+void *producer_thread(void *arg);
+void *consumer_thread(void *arg);
+void *buffer_thread(void *arg);
 
 int main(int argc,char *argv[]){
 
     int iret;
-    pthread_t t1,t2;
+    pthread_t t1,t2,t3;
 
     //initialize monitor and csp channels!
     pthread_mutex_init(&monitor,NULL);
@@ -65,28 +74,59 @@ int main(int argc,char *argv[]){
     return(0);
 }
 
-void *sender_thread(void *arg){
+void *buffer_thread(void *arg){
     
-    char text ='F';
+    int *chans = (int *)arg;
+    int len = sizeof(chans)/sizeof(int);
+    int channel;
+    char request;
 
-   // while(1){
+    while(1){
+        //check which channel sent
         pthread_mutex_lock(&monitor);
-        csp_send(cc,0,&text);
+        channel=csp_wait(cc,chans,len);
         pthread_mutex_unlock(&monitor);
-   // }
+
+        //receive the msg from channel
+        pthread_mutex_lock(&monitor);
+        csp_recv(cc,channel,&request);
+        pthread_mutex_unlock(&monitor);
+
+
+    }
+
+}
+
+void *producer_thread(void *arg){
+    
+    char product ='P';
+    int channel =*(int *)arg;
+
+    pthread_mutex_lock(&monitor);
+    csp_send(cc,channel,&product);
+    pthread_mutex_unlock(&monitor);
+
     return NULL;
 }
 
-void *receiver_thread(void *arg){
+void *consumer_thread(void *arg){
 
-    char msg;
+    char get='G';
+    char product;
+    int channel_get =*(int *)arg;
+    int channel_product =*(int *)(arg+1);
 
-   //while(1){
-        pthread_mutex_lock(&monitor);
-        csp_recv(cc,0,&msg);
-        debug("Message received----> %c",msg);
-        pthread_mutex_unlock(&monitor);
-    //}
+    pthread_mutex_lock(&monitor);
+    debug("Order a product from channel: %d",channel_get);
+    csp_send(cc,channel_get,&get);
+    pthread_mutex_unlock(&monitor);
+
+    pthread_mutex_lock(&monitor);
+    csp_recv(cc,channel_product,&product);
+    debug("Get product %c  from channel: %d",product,channel_product);
+    pthread_mutex_unlock(&monitor);
+    
+
     return NULL;
 
 }
@@ -98,23 +138,36 @@ void csp_init(csp_ctxt *cc,int nofchans){
     
     for (i=0; i<nofchans; i++){
         pthread_cond_init(&cc[i].recv_cond,NULL);
-        pthread_cond_init(&cc[i].send_cond,NULL);
+        cc[i].send_cond=NULL;
         cc[i].sent = false;
         cc[i].recv = false;
         cc[i].data = NULL;
+        cc[i].waiting_chans = NULL;
     }
     debug("Done csp_init");
 }
 
 int csp_send(csp_ctxt *cc, int chan, char *msg){
 
+    int len,i;
+
     debug("Send a msg from channel: %d", chan);
     cc[chan].recv = false;
     cc[chan].data = msg;
     cc[chan].sent = true;
-    
-    //notify receiver!
-    pthread_cond_signal(&cc[chan].send_cond);
+        
+    //notify channel!
+    if (cc[chan].send_cond!=NULL){
+        len = sizeof(cc[chan].waiting_chans)/sizeof(int);
+
+        for (i=0; i<len; i++){
+            if (i!=chan){
+                cc[i].waiting_chans=NULL;
+                cc[i].send_cond=NULL;
+            }
+        }
+        pthread_cond_signal(cc[chan].send_cond);
+    }
 
     //wait for reply
     if (cc[chan].recv==false){
@@ -129,14 +182,9 @@ int csp_send(csp_ctxt *cc, int chan, char *msg){
 
 int csp_recv(csp_ctxt *cc,int chan,char *msg){
     
-    debug("Receive a msg from channel: %d",chan);
+    debug("Receiver waits for a msg from channel: %d",chan);
 
-    //check for a msg at channel
-    if (cc[chan].sent==false){
-        debug("No msg at channel: %d ", chan);
-        pthread_cond_wait(&cc[chan].send_cond,&monitor);
-    }
-
+    csp_wait(cc,&chan,1);
     //there is a msg at channel,receive it!
     cc[chan].sent = false;
     *msg=*(cc[chan].data);
@@ -148,4 +196,42 @@ int csp_recv(csp_ctxt *cc,int chan,char *msg){
     debug("Done receive at channel: %d",chan);
 
     return(1);
+}
+
+int csp_wait(csp_ctxt *cc, int chans[], int len){
+    
+    int i;
+    pthread_cond_t tmp_wait;
+    pthread_cond_init(&tmp_wait,NULL);
+
+    debug("csp_wait check for a msg!");
+    //check for a msg
+    for (i=0; i<len; i++){
+        if (cc[chans[i]].sent==true){
+            debug("csp_wait return channel: %d",i);
+            return i;
+        }
+    }
+
+    //assign cond for each channel in chans[]
+    for (i=0; i<len; i++){
+        cc[chans[i]].send_cond = &tmp_wait;
+        cc[chans[i]].waiting_chans = chans;
+    }
+
+    debug("csp_wait: wait at condition");
+    //wait for a msg
+    pthread_cond_wait(&tmp_wait,&monitor);
+    
+    //check for a msg
+    for (i=0; i<len; i++){
+        if (cc[chans[i]].sent==true){
+            cc[chans[i]].waiting_chans=NULL;
+            cc[chans[i]].send_cond=NULL;
+            debug("csp_wait wake up from channel: %d",i);
+            return i;
+        }
+    }
+    
+    return(NOT_CHANNEL);
 }
