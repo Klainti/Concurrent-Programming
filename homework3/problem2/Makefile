@@ -1,6 +1,15 @@
+CC = gcc
+CFLAGS = -Wall -DDEBUG -DDEBUG_COLOR 
+OBJ = prob2.o
+LDFLAGS = -lpthread
+DEPS = debug.h
 
-all: 
-	gcc -Wall -g -DDEBUG -DDEBUG_COLOR prob2.c -o prob2 -lpthread
+prob2: $(OBJ) 
+	$(CC) $@.o -o $@ $(LDFLAGS)
 
-clean: 
-	rm -f prob2
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) -c $<
+
+.PHONY: clean
+clean:
+	rm -rf *.o *.dSYM
