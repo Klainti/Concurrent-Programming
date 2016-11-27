@@ -23,6 +23,7 @@ typedef struct {
 
     //all channels waiting in csp_wait!
     int *waiting_chans;
+    int waiting_chans_len;
 
     //msg
     char *data;
@@ -54,40 +55,57 @@ void *buffer_thread(void *arg);
 
 int main(int argc,char *argv[]){
 
-    int i, bufSize, iret, consumer;
+    int i, bufSize, iret, len;
+    int *channel;
     pthread_t tp,tc,tb;
     
+    
     arguments = (buffer_args *) malloc (sizeof(buffer_args));
+    if (arguments==NULL){
+        debug_e("Malloc failed!");
+        return(EXIT_FAILURE);
+    }
 
     printf("Enter the number of producers and consumers: ");
     scanf("%d %d", &(arguments->nOfProducers), &(arguments->nOfConsumers));
+    len=arguments->nOfProducers + arguments->nOfConsumers;
 
     printf("Enter the size of the buffer: ");
     scanf("%d", &bufSize);
 
+    debug_e("%d %d %d",arguments->nOfProducers,arguments->nOfConsumers,bufSize);
+
+    channel = (int *) malloc(sizeof(int)*len);
     //initialize monitor and csp channels!
     pthread_mutex_init(&monitor,NULL);
-    cc = (csp_ctxt *) malloc(sizeof(csp_ctxt));
-    if (cc==NULL){debug_e("Malloc failed!");}
-    csp_init(cc, arguments->nOfProducers + arguments->nOfConsumers);
+    cc = (csp_ctxt *) malloc(sizeof(csp_ctxt)*len);
+    if (cc==NULL){
+        debug_e("Malloc failed!");
+        return(EXIT_FAILURE);
+    }
+    csp_init(cc,len);
 
+    debug_e("Create buffer thread");
     iret = pthread_create(&tb,NULL,&buffer_thread, (void *) &bufSize);
     if (iret){
         debug_e("pthead_create error");
         return(EXIT_FAILURE);
     }
+    debug_e("Create producers");
 
     for (i = 0; i < arguments->nOfProducers; i++){
-    	iret = pthread_create(&tp,NULL,&producer_thread, (void *) &i);
+	    channel[i] = i; 
+    	iret = pthread_create(&tp,NULL,&producer_thread, (void *) &channel[i]);
     	if (iret){
         	debug_e("pthead_create error");
         	return(EXIT_FAILURE);
     	}
     }
-    
+    debug_e("Create consumer");
+
     for (i = 0; i < arguments->nOfConsumers; i++){
-        consumer = arguments->nOfProducers + i;
-    	iret = pthread_create(&tc,NULL,&consumer_thread,(void *) &consumer);
+	    channel[arguments->nOfProducers + i] = arguments->nOfProducers + i; 
+    	iret = pthread_create(&tc,NULL,&consumer_thread,(void *) &channel[arguments->nOfProducers + i]);
     	if (iret){
         	debug_e("pthead_create error");
         	return(EXIT_FAILURE);
@@ -107,7 +125,11 @@ void *buffer_thread(void *arg){
 	int channels[len];
 	int channelsP[arguments->nOfProducers];
 	int channelsC[arguments->nOfConsumers];
+    char data = 'D';
 
+
+    //init arrays with channels for consumer,producer
+    debug_e("Create arrays");
     for (i = 0; i < len; i++){
         channels[i] = i;
         if (i < arguments->nOfProducers){
@@ -118,9 +140,10 @@ void *buffer_thread(void *arg){
         }
     }
 
+    debug_e("Check produce/consume");
 	while(1){
-		if (n > 0 && n < bufSize){
-            debug("Producers and consumers\n");
+		if (n > 0 && n < bufSize){ //consume or produce
+            debug("Producers and consumers");
 			pthread_mutex_lock(&monitor);
     		channel = csp_wait(cc, channels, len);
     		pthread_mutex_unlock(&monitor);
@@ -129,37 +152,47 @@ void *buffer_thread(void *arg){
          	csp_recv(cc,channel,&request);
     	    if (request == 'P'){
     	    	//Producer
+                debug("Channel: %d Request: %c", channel,request);
     	    	in = (in + 1) % bufSize;
     	    	n++;
+                debug("Buffer--> Capacity: %d and in_data: %d", n,in);
     	    }
     	    else if (request == 'G'){
     	    	//Consumer
+                debug("Channel: %d Request: %c", channel,request);
     	    	out = (out + 1) % bufSize;
     	    	n--;
-                pthread_cond_signal(&cc[channel].recv_cond);
+                debug("Buffer--> Capacity: %d and out_data: %d", n,out);
+                csp_send(cc,channel,&data);
+
     	    }
             pthread_mutex_unlock(&monitor);
     	}
     	else if (n == 0){
     		//buffer is empty
     		//Only producers are allowed
-            debug("Only producers\n");
+            debug("Only producers");
             pthread_mutex_lock(&monitor);
     		channel = csp_wait(cc, channelsP, arguments->nOfProducers);
+            csp_recv(cc,channel,&request);
+            debug("Channel: %d Request: %c", channel,request);
     		in = (in + 1) % bufSize;
     		n++;
-            pthread_cond_signal(&cc[channel].recv_cond);
+            debug("Buffer--> Capacity: %d and in_data: %d", n,out);
             pthread_mutex_unlock(&monitor);
     	}
     	else{
     		//Buffer is full
     		//Only consumers are allowed
-            debug("Only consumers\n");
+            debug("Only consumers");
             pthread_mutex_lock(&monitor);
     		channel = csp_wait(cc, channelsC, arguments->nOfConsumers);
+            csp_recv(cc,channel,&request);
+            debug("Channel: %d Request: %c", channel,request);
     		out = (out + 1) & bufSize;
     		n--;
-            pthread_cond_signal(&cc[channel].recv_cond);
+            debug("Buffer--> Capacity: %d and out_data: %d", n,out);
+            csp_send(cc,channel,&data);
             pthread_mutex_unlock(&monitor);
     	}
 	}
@@ -181,17 +214,16 @@ void *consumer_thread(void *arg){
 
     char get='G';
     char product;
-    int channel_get =*(int *)arg;
-    int channel_product =*(int *)(arg+1);
+    int channel =*(int *)arg;
 
     pthread_mutex_lock(&monitor);
-    debug("Order a product from channel: %d",channel_get);
-    csp_send(cc,channel_get,&get);
+    debug("Order a product from channel: %d",channel);
+    csp_send(cc,channel,&get);
     pthread_mutex_unlock(&monitor);
 
     pthread_mutex_lock(&monitor);
-    csp_recv(cc,channel_product,&product);
-    debug("Get product %c  from channel: %d",product,channel_product);
+    csp_recv(cc,channel,&product);
+    debug("Get product %c  from channel: %d",product,channel);
     pthread_mutex_unlock(&monitor);
     
 
@@ -217,7 +249,7 @@ void csp_init(csp_ctxt *cc,int nofchans){
 
 int csp_send(csp_ctxt *cc, int chan, char *msg){
 
-    int len,i;
+    int i;
 
     debug("Send a msg from channel: %d", chan);
     cc[chan].recv = false;
@@ -226,14 +258,20 @@ int csp_send(csp_ctxt *cc, int chan, char *msg){
         
     //notify channel!
     if (cc[chan].send_cond!=NULL){
-        len = sizeof(cc[chan].waiting_chans)/sizeof(int);
-
-        for (i=0; i<len; i++){
-            if (i!=chan){
-                cc[i].waiting_chans=NULL;
-                cc[i].send_cond=NULL;
+        debug("len----> %d", cc[chan].waiting_chans_len);
+        debug("Inside NULL statements"); 
+        for (i=0; i<cc[chan].waiting_chans_len; i++){
+            debug_e("Inside Null: --> %d", cc[chan].waiting_chans[i]);
+            if (cc[chan].waiting_chans[i]!=chan){
+                cc[cc[chan].waiting_chans[i]].waiting_chans=NULL;
+                cc[cc[chan].waiting_chans[i]].send_cond=NULL;
             }
         }
+
+        for (i=0; i<cc[chan].waiting_chans_len; i++){
+            debug("After nulling: %d : %d", cc[chan].waiting_chans[i],cc[cc[chan].waiting_chans[i]].send_cond);
+        }
+
         pthread_cond_signal(cc[chan].send_cond);
     }
 
@@ -243,7 +281,6 @@ int csp_send(csp_ctxt *cc, int chan, char *msg){
         pthread_cond_wait(&cc[chan].recv_cond, &monitor);
     }
 
-    cc[chan].sent = false;
     debug("Done send at channel: %d", chan);
 
     return(1);
@@ -278,14 +315,18 @@ int csp_wait(csp_ctxt *cc, int chans[], int len){
     for (i=0; i<len; i++){
         if (cc[chans[i]].sent==true){
             debug("csp_wait return channel: %d",chans[i]);
-            return i;
+            cc[chans[i]].send_cond=NULL;
+            return chans[i];
         }
     }
 
     //assign cond for each channel in chans[]
     for (i=0; i<len; i++){
         cc[chans[i]].send_cond = &tmp_wait;
+        debug_e("chan: %d ---> %d",chans[i],cc[chans[i]].send_cond);
         cc[chans[i]].waiting_chans = chans;
+        cc[chans[i]].waiting_chans_len = len;
+
     }
 
     debug("csp_wait: wait at condition");
@@ -298,7 +339,7 @@ int csp_wait(csp_ctxt *cc, int chans[], int len){
             cc[chans[i]].waiting_chans=NULL;
             cc[chans[i]].send_cond=NULL;
             debug("csp_wait wake up from channel: %d",i);
-            return i;
+            return chans[i];
         }
     }
     
