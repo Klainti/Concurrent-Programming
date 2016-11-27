@@ -9,7 +9,6 @@
 typedef struct{
 	int nOfProducers;
 	int nOfConsumers;
-	char channels[nOfProducers+nOfConsumers];
 }buffer_args;
 
 typedef struct {
@@ -31,6 +30,7 @@ typedef struct {
 }csp_ctxt;
 
 csp_ctxt *cc;
+buffer_args *arguments;
 
 pthread_mutex_t monitor;
 
@@ -54,21 +54,22 @@ void *buffer_thread(void *arg);
 
 int main(int argc,char *argv[]){
 
-    int i, bufSize, iret;
+    int i, bufSize, iret, consumer;
     pthread_t tp,tc,tb;
-    buffer_args *arguments;
+    
+    arguments = (buffer_args *) malloc (sizeof(buffer_args));
 
     printf("Enter the number of producers and consumers: ");
-    scanf("%d %d", &arguments.nOfProducers, &arguments.nOfConsumers);
+    scanf("%d %d", &(arguments->nOfProducers), &(arguments->nOfConsumers));
 
     printf("Enter the size of the buffer: ");
-    scanf("%d %d", &bufSize);
+    scanf("%d", &bufSize);
 
     //initialize monitor and csp channels!
     pthread_mutex_init(&monitor,NULL);
     cc = (csp_ctxt *) malloc(sizeof(csp_ctxt));
     if (cc==NULL){debug_e("Malloc failed!");}
-    csp_init(cc, arguments.nOfProducers + arguments.nOfConsumers);
+    csp_init(cc, arguments->nOfProducers + arguments->nOfConsumers);
 
     iret = pthread_create(&tb,NULL,&buffer_thread, (void *) &bufSize);
     if (iret){
@@ -76,7 +77,7 @@ int main(int argc,char *argv[]){
         return(EXIT_FAILURE);
     }
 
-    for (i = 0; i < arguments.nOfProducers; i++){
+    for (i = 0; i < arguments->nOfProducers; i++){
     	iret = pthread_create(&tp,NULL,&producer_thread, (void *) &i);
     	if (iret){
         	debug_e("pthead_create error");
@@ -84,8 +85,9 @@ int main(int argc,char *argv[]){
     	}
     }
     
-    for (i = 0; i < arguments.nOfConsumers; i++){
-    	iret = pthread_create(&tc,NULL,&consumer_thread,(void *) &(arguments.nOfProducers + i));
+    for (i = 0; i < arguments->nOfConsumers; i++){
+        consumer = arguments->nOfProducers + i;
+    	iret = pthread_create(&tc,NULL,&consumer_thread,(void *) &consumer);
     	if (iret){
         	debug_e("pthead_create error");
         	return(EXIT_FAILURE);
@@ -98,68 +100,69 @@ int main(int argc,char *argv[]){
 }
 
 void *buffer_thread(void *arg){
-	int n = 0, in = 0, out = 0;
+	int i, n = 0, in = 0, out = 0, channel;
 	int bufSize =  *(int *) arg;
+    int len = arguments->nOfProducers + arguments->nOfConsumers;
 	char request;
-	int *channels;
-	int *channelsP[arguments.nOfProducers] = {0, 1, 2};
-	int *channelsC[arguments.nOfConsumers] = {3, 4, 5};
+	int channels[len];
+	int channelsP[arguments->nOfProducers];
+	int channelsC[arguments->nOfConsumers];
+
+    for (i = 0; i < len; i++){
+        channels[i] = i;
+        if (i < arguments->nOfProducers){
+            channelsP[i] = i;
+        }
+        else{
+            channelsC[i - arguments->nOfProducers] = i;
+        }
+    }
 
 	while(1){
 		if (n > 0 && n < bufSize){
+            debug("Producers and consumers\n");
 			pthread_mutex_lock(&monitor);
-    		int len = arguments.nOfProducers + arguments.nOfConsumers;
-    		csp_wait(cc, channels, len);
+    		channel = csp_wait(cc, channels, len);
     		pthread_mutex_unlock(&monitor);
 
     		pthread_mutex_lock(&monitor);
-         	csp_recv(cc,channels,&request);
-    	    pthread_mutex_unlock(&monitor);
-    	    if (request == "P"){
+         	csp_recv(cc,channel,&request);
+    	    if (request == 'P'){
     	    	//Producer
     	    	in = (in + 1) % bufSize;
     	    	n++;
     	    }
-    	    else if (request == "G"){
+    	    else if (request == 'G'){
     	    	//Consumer
     	    	out = (out + 1) % bufSize;
     	    	n--;
+                pthread_cond_signal(&cc[channel].recv_cond);
     	    }
+            pthread_mutex_unlock(&monitor);
     	}
     	else if (n == 0){
     		//buffer is empty
     		//Only producers are allowed
-    		csp_wait(cc, channelsP, arguments.nOfProducers);
+            debug("Only producers\n");
+            pthread_mutex_lock(&monitor);
+    		channel = csp_wait(cc, channelsP, arguments->nOfProducers);
     		in = (in + 1) % bufSize;
     		n++;
+            pthread_cond_signal(&cc[channel].recv_cond);
+            pthread_mutex_unlock(&monitor);
     	}
     	else{
     		//Buffer is full
     		//Only consumers are allowed
-    		csp_wait(cc, channelsC, arguments.nOfConsumers);
+            debug("Only consumers\n");
+            pthread_mutex_lock(&monitor);
+    		channel = csp_wait(cc, channelsC, arguments->nOfConsumers);
     		out = (out + 1) & bufSize;
-    		n++;
+    		n--;
+            pthread_cond_signal(&cc[channel].recv_cond);
+            pthread_mutex_unlock(&monitor);
     	}
 	}
-    // int *chans = (int *)arg;
-    // int len = sizeof(chans)/sizeof(int);
-    // int channel;
-    // char request;
-
-    // while(1){
-    //     //check which channel sent
-    //     pthread_mutex_lock(&monitor);
-    //     channel=csp_wait(cc,chans,len);
-    //     pthread_mutex_unlock(&monitor);
-
-    //     //receive the msg from channel
-    //     pthread_mutex_lock(&monitor);
-    //     csp_recv(cc,channel,&request);
-    //     pthread_mutex_unlock(&monitor);
-
-
-    // }
-
 }
 
 void *producer_thread(void *arg){
@@ -240,6 +243,7 @@ int csp_send(csp_ctxt *cc, int chan, char *msg){
         pthread_cond_wait(&cc[chan].recv_cond, &monitor);
     }
 
+    cc[chan].sent = false;
     debug("Done send at channel: %d", chan);
 
     return(1);
@@ -273,7 +277,7 @@ int csp_wait(csp_ctxt *cc, int chans[], int len){
     //check for a msg
     for (i=0; i<len; i++){
         if (cc[chans[i]].sent==true){
-            debug("csp_wait return channel: %d",i);
+            debug("csp_wait return channel: %d",chans[i]);
             return i;
         }
     }
