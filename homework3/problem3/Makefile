@@ -1,14 +1,14 @@
 CC = gcc
 CFLAGS = -Wall -DDEBUG -DDEBUG_COLOR 
-OBJ = prob3.o
+OBJ = prob3.o libcsp.o
 LDFLAGS = -lpthread
 DEPS = debug.h
 
 prob3: $(OBJ)
-	$(CC) $@.o -o $@ $(LDFLAGS)
+	$(CC) $(OBJ) -o $@  $(LDFLAGS)
 
-%.o: %.c $(DEPS)
-	$(CC) $(CFLAGS) -c $<
+%.o : %.c $(DEPS)
+		$(CC) $(CFLAGS) -c $< $(LDFLAGS)
 
 .PHONY: clean
 clean:

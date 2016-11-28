@@ -3,14 +3,16 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include "debug.h"
+#include "libcsp.h"
 
-#define NOT_CHANNEL -1
+//#define NOT_CHANNEL -1
 
 typedef struct{
 	int nOfProducers;
 	int nOfConsumers;
 }buffer_args;
 
+/*
 typedef struct {
 
     //condition for send and receive a msg
@@ -29,13 +31,14 @@ typedef struct {
     char *data;
 
 }csp_ctxt;
+*/
 
-csp_ctxt *cc;
+//csp_ctxt *cc;
 buffer_args *arguments;
 
 pthread_mutex_t monitor;
 
-
+/*
 //initialize frame sync for a specific number of channels.
 void csp_init(csp_ctxt *cc,int nofchans);
 
@@ -47,6 +50,8 @@ int csp_recv(csp_ctxt *cc,int chan,char *msg);
 
 //Wait till a channel send msg.Return the channel 
 int csp_wait(csp_ctxt *cc, int chans[], int len);
+
+*/
 
 //function threads!
 void *producer_thread(void *arg);
@@ -231,6 +236,8 @@ void *consumer_thread(void *arg){
 
 }
 
+/*
+
 void csp_init(csp_ctxt *cc,int nofchans){
 
     int i;
@@ -345,3 +352,5 @@ int csp_wait(csp_ctxt *cc, int chans[], int len){
     
     return(NOT_CHANNEL);
 }
+
+*/
