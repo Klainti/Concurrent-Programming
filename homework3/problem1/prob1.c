@@ -64,10 +64,8 @@ void cross(int side){
 
     if (crossing[1-side] + blocked[1-side]>0){ //Check for other side
         //Give priority to other side
-        debug("Wait for other side to cross the bridge");
         blocked[side]++;
-        debug("Blocked: %d",blocked[side]);
-        debug("Enter queue[%d]",side);
+        debug("Wait for other side to cross the bridge,Blocked: %d, Enter queue[%d]",blocked[side],side);
         pthread_cond_wait(&queue[side],&mtx);
         debug("Check for crossing the road--> cross:%d and blocked:%d",crossing[side],blocked[side]);
         if (blocked[side]>0 && crossing[side]<carsBrigde){//check for crossing the road
@@ -90,10 +88,8 @@ void cross(int side){
             crossing[side]++;
        }
         else{
-            debug("Bridge full , side:%s",side ? "Blue" : "Red");
             blocked[side]++;
-            debug("Blocked: %d",blocked[side]);
-            debug("Enter queue[%d]",side);
+            debug("Bridge full , side:%s , Blocked: %d, Enter queue[%d]",side ? "Blue" : "Red",blocked[side],side);
             pthread_cond_wait(&queue[side],&mtx);
             debug("Check for crossing the road--> cross:%d and blocked:%d",crossing[side],blocked[side]);
             if (blocked[side]>0 && crossing[side]<carsBrigde){//check for crossing the road
@@ -115,9 +111,8 @@ void cross(int side){
 
 void quit(int side){
 
-    debug("Enter Exit code");
+    debug("Enter Exit: %s", side ? "Blue" : "Red");
     crossing[side]--;
-    debug("Cars still in the bridge: %d",crossing[side]);
     if (crossing[side]==0){
         if (blocked[1-side]>0){
             debug("Last car, notify others side");
@@ -127,7 +122,8 @@ void quit(int side){
             debug("Last car, notify same side");
             pthread_cond_signal(&queue[side]);
         }
-   }
+    }
+    debug("Exit bridge!: %s", side ? "Blue" : "Red");
 
     car_crossed++;
     if (car_crossed==nOfcars){
