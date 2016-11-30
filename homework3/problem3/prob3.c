@@ -12,46 +12,11 @@ typedef struct{
 	int nOfConsumers;
 }buffer_args;
 
-/*
-typedef struct {
-
-    //condition for send and receive a msg
-    pthread_cond_t *send_cond;
-    pthread_cond_t recv_cond;
-
-    //checks for a msg 
-    bool sent;
-    bool recv;
-
-    //all channels waiting in csp_wait!
-    int *waiting_chans;
-    int waiting_chans_len;
-
-    //msg
-    char *data;
-
-}csp_ctxt;
-*/
 
 //csp_ctxt *cc;
 buffer_args *arguments;
 
 pthread_mutex_t monitor;
-
-/*
-//initialize frame sync for a specific number of channels.
-void csp_init(csp_ctxt *cc,int nofchans);
-
-//Send a msg to chan
-int csp_send(csp_ctxt *cc, int chan, char *msg);
-
-//Receive a msg from chan
-int csp_recv(csp_ctxt *cc,int chan,char *msg);
-
-//Wait till a channel send msg.Return the channel 
-int csp_wait(csp_ctxt *cc, int chans[], int len);
-
-*/
 
 //function threads!
 void *producer_thread(void *arg);
@@ -60,10 +25,16 @@ void *buffer_thread(void *arg);
 
 int main(int argc,char *argv[]){
 
-    int i, bufSize, iret, len;
+    int i, bufSize, iret, len,producer_or_consumer,times;
     int *channel;
+    int producer_channel=0;
+    int consumer_channel;
     pthread_t tp,tc,tb;
     
+    if (argc<4){
+        debug_e("Give buffer_size and nof producers/consumer!!!");
+        return(EXIT_FAILURE);
+    }
     
     arguments = (buffer_args *) malloc (sizeof(buffer_args));
     if (arguments==NULL){
@@ -71,14 +42,13 @@ int main(int argc,char *argv[]){
         return(EXIT_FAILURE);
     }
 
-    printf("Enter the number of producers and consumers: ");
-    scanf("%d %d", &(arguments->nOfProducers), &(arguments->nOfConsumers));
+    //inputs!
+    bufSize = atoi(argv[1]);
+    arguments->nOfProducers = atoi(argv[2]);
+    arguments->nOfConsumers = atoi(argv[3]);
+    consumer_channel = arguments->nOfProducers;
     len=arguments->nOfProducers + arguments->nOfConsumers;
 
-    printf("Enter the size of the buffer: ");
-    scanf("%d", &bufSize);
-
-    channel = (int *) malloc(sizeof(int)*len);
     //initialize monitor and csp channels!
     pthread_mutex_init(&monitor,NULL);
     cc = (csp_ctxt *) malloc(sizeof(csp_ctxt)*len);
@@ -94,25 +64,37 @@ int main(int argc,char *argv[]){
         return(EXIT_FAILURE);
     }
 
-    for (i = 0; i < arguments->nOfProducers; i++){
-	    channel[i] = i; 
-    	iret = pthread_create(&tp,NULL,&producer_thread, (void *) &channel[i]);
-    	if (iret){
-        	debug_e("pthead_create error");
-        	return(EXIT_FAILURE);
-    	}
+    for (i=0; i<len; i++){ //give channels to producers/consumers!
+        channel = (int *) malloc(2*sizeof(int)); 
+        if (channel==NULL){
+            debug_e("Malloc failed!");
+            return(EXIT_FAILURE);
+        }
+
+        scanf("%d %d", &producer_or_consumer,(channel+1));
+
+        if (producer_or_consumer==0){
+            *(channel+0) = producer_channel;
+            producer_channel++;
+     	    iret = pthread_create(&tp,NULL,&producer_thread, (void *) channel);
+    	    if (iret){
+        	    debug_e("pthead_create error");
+        	    return(EXIT_FAILURE);
+    	    }
+        }
+        else{
+            *channel = consumer_channel;
+            consumer_channel++;
+     	    iret = pthread_create(&tc,NULL,&consumer_thread,(void *) channel);
+    	    if (iret){
+        	    debug_e("pthead_create error");
+        	    return(EXIT_FAILURE);
+    	    }
+        }
     }
 
-    for (i = 0; i < arguments->nOfConsumers; i++){
-	    channel[arguments->nOfProducers + i] = arguments->nOfProducers + i; 
-    	iret = pthread_create(&tc,NULL,&consumer_thread,(void *) &channel[arguments->nOfProducers + i]);
-    	if (iret){
-        	debug_e("pthead_create error");
-        	return(EXIT_FAILURE);
-    	}
-    }
 
-    while(1);
+    pthread_join(tb,NULL);
       
     return(0);
 }
@@ -201,11 +183,17 @@ void *buffer_thread(void *arg){
 void *producer_thread(void *arg){
     
     char product ='P';
-    int channel =*(int *)arg;
+    int *int_arg = (int *)arg;
+    int channel,times,i;
 
-    pthread_mutex_lock(&monitor);
-    csp_send(cc,channel,&product);
-    pthread_mutex_unlock(&monitor);
+    channel =int_arg[0];
+    times =int_arg[1];
+
+    for (i=0; i<times; i++){
+        pthread_mutex_lock(&monitor);
+        csp_send(cc,channel,&product);
+        pthread_mutex_unlock(&monitor);
+    }
 
     return NULL;
 }
@@ -214,18 +202,23 @@ void *consumer_thread(void *arg){
 
     char get='G';
     char product;
-    int channel =*(int *)arg;
+    int *int_arg = (int *)arg;
+    int channel,times,i;
 
-    pthread_mutex_lock(&monitor);
-    debug("Order a product from channel: %d",channel);
-    csp_send(cc,channel,&get);
-    pthread_mutex_unlock(&monitor);
+    channel = int_arg[0];
+    times = int_arg[1];
 
-    pthread_mutex_lock(&monitor);
-    csp_recv(cc,channel,&product);
-    debug("Get product %c  from channel: %d",product,channel);
-    pthread_mutex_unlock(&monitor);
-    
+    for (i=0; i<times; i++){
+        pthread_mutex_lock(&monitor);
+        debug("Order a product from channel: %d",channel);
+        csp_send(cc,channel,&get);
+        pthread_mutex_unlock(&monitor);
+
+        pthread_mutex_lock(&monitor);
+        csp_recv(cc,channel,&product);
+        debug("Get product %c  from channel: %d",product,channel);
+        pthread_mutex_unlock(&monitor);
+    }
 
     return NULL;
 
