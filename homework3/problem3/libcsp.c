@@ -36,18 +36,11 @@ int csp_send(csp_ctxt *cc, int chan, char *msg){
         
     //notify channel!
     if (cc[chan].send_cond!=NULL){
-        debug("len----> %d", cc[chan].waiting_chans_len);
-        debug("Inside NULL statements"); 
         for (i=0; i<cc[chan].waiting_chans_len; i++){
-            debug_e("Inside Null: --> %d", cc[chan].waiting_chans[i]);
             if (cc[chan].waiting_chans[i]!=chan){
                 cc[cc[chan].waiting_chans[i]].waiting_chans=NULL;
                 cc[cc[chan].waiting_chans[i]].send_cond=NULL;
             }
-        }
-
-        for (i=0; i<cc[chan].waiting_chans_len; i++){
-            debug("After nulling: %d : %d", cc[chan].waiting_chans[i],cc[cc[chan].waiting_chans[i]].send_cond);
         }
 
         pthread_cond_signal(cc[chan].send_cond);
@@ -66,9 +59,12 @@ int csp_send(csp_ctxt *cc, int chan, char *msg){
 
 int csp_recv(csp_ctxt *cc,int chan,char *msg){
     
-    debug("Receiver waits for a msg from channel: %d",chan);
+    debug("Receive a msg from channel: %d",chan);
+    
+    if (cc[chan].sent==false){
+        csp_wait(cc,&chan,1);
+    }
 
-    csp_wait(cc,&chan,1);
     //there is a msg at channel,receive it!
     cc[chan].sent = false;
     *msg=*(cc[chan].data);
@@ -101,7 +97,6 @@ int csp_wait(csp_ctxt *cc, int chans[], int len){
     //assign cond for each channel in chans[]
     for (i=0; i<len; i++){
         cc[chans[i]].send_cond = &tmp_wait;
-        debug_e("chan: %d ---> %d",chans[i],cc[chans[i]].send_cond);
         cc[chans[i]].waiting_chans = chans;
         cc[chans[i]].waiting_chans_len = len;
 
