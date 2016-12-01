@@ -42,12 +42,24 @@ int main(int argc,char *argv[]){
         return(EXIT_FAILURE);
     }
 
+
     //inputs!
     bufSize = atoi(argv[1]);
     arguments->nOfProducers = atoi(argv[2]);
     arguments->nOfConsumers = atoi(argv[3]);
     consumer_channel = arguments->nOfProducers;
     len=arguments->nOfProducers + arguments->nOfConsumers;
+
+    //init arrays with channels for consumer,producer
+    for (i = 0; i < len; i++){
+        if (i < arguments->nOfProducers){
+            debug("Produce channel: %d", i);
+        }
+        else{
+            debug("Consumer channel: %d", i);
+        }
+    }
+
 
     //initialize monitor and csp channels!
     pthread_mutex_init(&monitor,NULL);
@@ -114,11 +126,9 @@ void *buffer_thread(void *arg){
     for (i = 0; i < len; i++){
         channels[i] = i;
         if (i < arguments->nOfProducers){
-            debug("Produce channel: %d", i);
             channelsP[i] = i;
         }
         else{
-            debug("Consumer channel: %d", i);
             channelsC[i - arguments->nOfProducers] = i;
         }
     }
@@ -145,6 +155,7 @@ void *buffer_thread(void *arg){
     	    	out = (out + 1) % bufSize;
     	    	n--;
                 debug("Buffer--> Capacity: %d and out_data: %d", n,out);
+                debug("Buffer sent data from channel: %d", channel);
                 csp_send(cc,channel,&data);
 
     	    }
@@ -174,6 +185,7 @@ void *buffer_thread(void *arg){
     		out = (out + 1) & bufSize;
     		n--;
             debug("Buffer--> Capacity: %d and out_data: %d", n,out);
+            debug("Buffer sent data from channel: %d", channel);
             csp_send(cc,channel,&data);
             pthread_mutex_unlock(&monitor);
     	}
@@ -191,7 +203,9 @@ void *producer_thread(void *arg){
 
     for (i=0; i<times; i++){
         pthread_mutex_lock(&monitor);
+        debug("Producer sent msg from channel: %d", channel);
         csp_send(cc,channel,&product);
+        debug("Producer done from channel: %d", channel);
         pthread_mutex_unlock(&monitor);
     }
 
@@ -210,13 +224,15 @@ void *consumer_thread(void *arg){
 
     for (i=0; i<times; i++){
         pthread_mutex_lock(&monitor);
-        debug("Order a product from channel: %d",channel);
+        debug("Consumer order a product from channel: %d",channel);
         csp_send(cc,channel,&get);
+        debug("Consumer order done from channel: %d",channel);
         pthread_mutex_unlock(&monitor);
 
         pthread_mutex_lock(&monitor);
+        debug("Consumer receive data from channel %d",channel);
         csp_recv(cc,channel,&product);
-        debug("Get product %c  from channel: %d",product,channel);
+        debug("Consumer get product %c  from channel: %d",product,channel);
         pthread_mutex_unlock(&monitor);
     }
 
