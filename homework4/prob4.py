@@ -22,17 +22,49 @@ def SET(var_name,var,name_of_program):
     insert_to_mem(name_of_program,var_name,var)
     return None
 
+def BRGT(var1,var2,label,pc,name_of_program):
 
-
-
-def bgrt(var1,var2,label,pc):
-    
     if (var1>var2):
         return label
     else:
         return pc+1
 
-    return None
+def BRGE(var1,var2,label,pc,name_of_program):
+
+    if (var1>=var2):
+        return label
+    else:
+        return pc+1
+
+def BRLT(var1,var2,label,pc,name_of_program):
+
+    if (var1<var2):
+        return label
+    else:
+        return pc+1
+
+def BRLE(var1,var2,label,pc,name_of_program):
+
+    if (var1<=var2):
+        return label
+    else:
+        return pc+1
+
+def BREQ(var1,var2,label,pc,name_of_program):
+
+    if (var1==var2):
+        return label
+    else:
+        return pc+1
+
+def BRA(label,name_of_program):
+    
+    return label
+
+def RETURN(name_of_program):
+    del memory[name_of_program]
+    del command[name_of_program]
+    name_of_programs.pop(name_of_programs.index(name_of_program))
 
 #read all lines from .txt
 def parser(program):
@@ -74,101 +106,114 @@ def var_or_value(name_of_program,variable):
     else:
         return int(variable)
 
-def run_command(name_of_program,command_list):
+def run_command(name_of_program,command_list,pc):
     
     if (command_list[0]=='ADD'):
         var_name = command_list[1]
         var1= var_or_value(name_of_program,command_list[2])
         var2 = var_or_value(name_of_program,command_list[3])
         ADD(var_name,var1,var2,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc+1)
     elif (command_list[0]=='SUB'):
         var_name = command_list[1]
         var1= var_or_value(name_of_program,command_list[2])
         var2 = var_or_value(name_of_program,command_list[3])
         SUB(var_name,var1,var2,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc+1)
     elif (command_list[0]=='MUL'):
         var_name = command_list[1]
         var1= var_or_value(name_of_program,command_list[2])
         var2 = var_or_value(name_of_program,command_list[3])
         MUL(var_name,var1,var2,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc+1)
     elif (command_list[0]=='DIV'):
         var_name = command_list[1]
         var1= var_or_value(name_of_program,command_list[2])
         var2 = var_or_value(name_of_program,command_list[3])
         DIV(var_name,var1,var2,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc+1)
     elif (command_list[0]=='MOD'):
         var_name = command_list[1]
         var1= var_or_value(name_of_program,command_list[2])
         var2 = var_or_value(name_of_program,command_list[3])
         MOD(var_name,var1,var2,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='SET'):
         var_name= command_list[1]
         var = var_or_value(name_of_program,command_list[2])
         SET(var_name,var,name_of_program)
-
+        insert_to_mem(name_of_program,'pc',pc+1)
+    elif(command_list[0]=='BRGT'):
+        var1 = var_or_value(name_of_program,command_list[1])
+        var2 = var_or_value(name_of_program,command_list[2])
+        label = memory[name_of_program][command_list[3]]
+        pc=BRGT(var1,var2,label,pc,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='BRGE'):
+        var1 = var_or_value(name_of_program,command_list[1])
+        var2 = var_or_value(name_of_program,command_list[2])
+        label = memory[name_of_program][command_list[3]]
+        pc=BRGE(var1,var2,label,pc,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='BRLT'):
+        var1 = var_or_value(name_of_program,command_list[1])
+        var2 = var_or_value(name_of_program,command_list[2])
+        label = memory[name_of_program][command_list[3]]
+        pc=BRLT(var1,var2,label,pc,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='BRLE'):
+        var1 = var_or_value(name_of_program,command_list[1])
+        var2 = var_or_value(name_of_program,command_list[2])
+        label = memory[name_of_program][command_list[3]]
+        pc=BRLE(var1,var2,label,pc,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='BREQ'):
+        var1 = var_or_value(name_of_program,command_list[1])
+        var2 = var_or_value(name_of_program,command_list[2])
+        label = memory[name_of_program][command_list[3]]
+        BREQ(var1,var2,label,pc,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='BRA'):
+        label = memory[name_of_program][command_list[1]]
+        pc=BRA(label,name_of_program)
+        insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='RETURN'):
+        RETURN(name_of_program)
+        global program_terminate
+        program_terminate=True
+        
 
 
 def main():
-    #read the code
-    program = input()
+
+    global program_terminate
+    while(1):
+        if (program_terminate==False): 
+            #read the code
+            program = input()
  
 
-    parser(program)
+            parser(program)
      
-    p_id = name_of_programs.index(program)
-    find_labels(name_of_programs[p_id])
+            p_id = name_of_programs.index(program)
+            find_labels(name_of_programs[p_id])
+            insert_to_mem(name_of_programs[p_id],'pc',0)
 
-    for i in range(5):
-        run_command(name_of_programs[p_id],command[name_of_programs[p_id]][i])
-        print(memory)
+        while(program_terminate==False):
+            program_counter = memory[name_of_programs[p_id]]['pc']
+            run_command(name_of_programs[p_id],command[name_of_programs[p_id]][program_counter],program_counter)
+            print(memory)
+
+        program_terminate=False
 
 
 
 
+global program_terminate
+program_terminate = False
 command = {}
 name_of_programs= []
 memory = {}
 list_of_commands = ['LOAD','STORE','SET','ADD','SUB','MUL','DIV','MOD','BRGT',
         'BRGE','BRLT','BRLE','BREQ','BRA','DOWN','UP','SLEEP','PRINT','RETURN']
-
-
-
-"""
-for _ in range(1):
-    p_id = name_of_programs.index(program)
-    
-    pc=0
-    for j in range(5):
-        if (command[name_of_programs[p_id]][pc][0]=='ADD'):
-            var_name = command[name_of_programs[p_id]][pc][1]
-            var1 = int(command[name_of_programs[p_id]][pc][2])
-            var2 = int(command[name_of_programs[p_id]][pc][3])
-            add(var_name,var1,var2,name_of_programs[p_id])
-            pc +=1
-            print(pc)
-        else:
-            label = int(command[name_of_programs[p_id]][pc][3])
-            print(label)
-
-            var1 = command[name_of_programs[p_id]][pc][1]
-            print(var1)
-            if ('$' in var1):
-                var1 = memory[name_of_programs[p_id]][var1[1:]]
-            else:
-                var1 = int(var1)
- 
-            var2 = command[name_of_programs[p_id]][pc][2]
-            print(var2)
-            if ('$' in var2):
-                var2 = memory[name_of_programs[p_id]][var2[1:]]
-            else:
-                var2 = int(var2)
-
-            print(var1)
-            print(var2)
-
-            pc = bgrt(var1,var2,label,pc)
-        
-            print(pc)
-"""
 main()
