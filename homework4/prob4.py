@@ -73,6 +73,15 @@ def PRINT(string,var):
     print(string + str(var))
     return None
 
+def LOAD(var_name,global_var_name,name_of_program):
+    global_value = global_memory[global_var_name]
+    SET(var_name,global_value,name_of_program)
+    return None
+
+def STORE(global_var_name,var_val):
+    global_memory[global_var_name] = var_val
+    return None
+
 def RETURN(name_of_program):
     del memory[name_of_program]
     del command[name_of_program]
@@ -222,6 +231,13 @@ def run_command(name_of_program,command_list,pc):
         var = var_or_value(name_of_program,command_list[2].strip('{').strip('}'))
         PRINT(string,var)
         insert_to_mem(name_of_program,'pc',pc+1)
+    elif(command_list[0]=='LOAD'):
+        LOAD(command_list[1],command_list[2],name_of_program)
+        insert_to_mem(name_of_program,'pc',pc+1)
+    elif(command_list[0]=='STORE'):
+        var = var_or_value(name_of_program,command_list[2])
+        STORE(command_list[1],var)
+        insert_to_mem(name_of_program,'pc',pc+1)       
     elif(command_list[0]=='RETURN'):
         RETURN(name_of_program)
         global program_terminate
@@ -247,7 +263,6 @@ def main():
         while(program_terminate==False):
             program_counter = memory[name_of_programs[p_id]]['pc']
             run_command(name_of_programs[p_id],command[name_of_programs[p_id]][program_counter],program_counter)
-
         program_terminate=False
 
 
@@ -258,6 +273,7 @@ program_terminate = False
 command = {}
 name_of_programs= []
 memory = {}
+global_memory = {}
 list_of_commands = ['LOAD','STORE','SET','ADD','SUB','MUL','DIV','MOD','BRGT',
         'BRGE','BRLT','BRLE','BREQ','BRA','DOWN','UP','SLEEP','PRINT','RETURN']
 main()
