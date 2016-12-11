@@ -107,9 +107,13 @@ def treat_print_statement(tmp_list):
 #read all lines from .txt
 def parser(program):
     fd = open(program,'r')
-    name_of_programs.append(fd.readline().strip('\n'))
+    program = program.split('.')[0]
 
-    p_id = name_of_programs.index(program)
+    is_program = fd.readline().strip('\n') 
+    if (is_program!='#PROGRAM'):
+        quit()
+
+    name_of_programs.append(program)
  
     #split each line of the program 
     tmp_list = []
@@ -120,7 +124,7 @@ def parser(program):
 
         if (tmp_line!=[]):
             tmp_list.append(tmp_line)
-            command[name_of_programs[p_id]] = tmp_list
+            command[program] = tmp_list
 
 
 
@@ -147,7 +151,7 @@ def insert_to_mem(name_of_program,key_var,value):
 def var_or_value(name_of_program,variable):
 
     if (variable[0]=='$'):
-        return memory[name_of_program][variable]
+        return int(memory[name_of_program][variable])
     else:
         return int(variable)
 
@@ -243,6 +247,14 @@ def run_command(name_of_program,command_list,pc):
         global program_terminate
         program_terminate=True
         
+def arguments(args):
+
+    argc=len(args)
+    SET('argc',argc,args[0])
+
+    for i in range(0,argc):
+        argv = 'argv'+'['+str(i)+']'
+        SET(argv,args[i],args[0])
 
 
 def main():
@@ -250,13 +262,17 @@ def main():
     global program_terminate
     while(1):
         if (program_terminate==False): 
-            #read the code
-            program = input()
- 
 
-            parser(program)
+            #read the code
+            exec_input = input('exec> ').split()
+            file_code = exec_input[0]+'.txt'
+            print(file_code)
+
+            arguments(exec_input)
+
+            parser(file_code)
      
-            p_id = name_of_programs.index(program)
+            p_id = name_of_programs.index(file_code.split('.')[0])
             find_labels(name_of_programs[p_id])
             insert_to_mem(name_of_programs[p_id],'pc',0)
 
@@ -264,9 +280,6 @@ def main():
             program_counter = memory[name_of_programs[p_id]]['pc']
             run_command(name_of_programs[p_id],command[name_of_programs[p_id]][program_counter],program_counter)
         program_terminate=False
-
-
-
 
 global program_terminate
 program_terminate = False
