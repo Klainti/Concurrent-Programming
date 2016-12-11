@@ -76,8 +76,12 @@ def parser(program):
     #split each line of the program 
     tmp_list = []
     for line in fd.readlines():
-        tmp_list.append(line.strip('\n').split())
-        command[name_of_programs[p_id]] = tmp_list
+        tmp_line = line.strip('\n').split()
+        if (tmp_line!=[]):
+            tmp_list.append(tmp_line)
+            command[name_of_programs[p_id]] = tmp_list
+
+
 
 #check and saves to memory labels and their lines in .txt
 def find_labels(name_of_program):
