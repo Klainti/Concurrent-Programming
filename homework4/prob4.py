@@ -1,3 +1,7 @@
+import time
+
+
+################################################################################
 def ADD(var_name,var1,var2,name_of_program):
     insert_to_mem(name_of_program,var_name,var1+var2)
     return None
@@ -61,10 +65,35 @@ def BRA(label,name_of_program):
     
     return label
 
+def SLEEP(var):
+    time.sleep(var)
+    return None
+
+def PRINT(string,var):
+    print(string + str(var))
+    return None
+
 def RETURN(name_of_program):
     del memory[name_of_program]
     del command[name_of_program]
     name_of_programs.pop(name_of_programs.index(name_of_program))
+    return None
+
+"""This function is useful for print command
+remove " from string and return a list with print command
+string without " and Varname"""
+def treat_print_statement(tmp_list):
+    con_string = ''
+    pointer1 = tmp_list.index('PRINT')+1
+    pointer2 = len(tmp_list)
+    for x in range(pointer1,pointer2-1):
+        con_string = con_string +' '+ tmp_list[x]
+
+    tmp_list1= tmp_list[0:tmp_list.index('PRINT')+1]
+    tmp_list1.append(con_string[2:len(con_string)-1])
+    tmp_list1.append(tmp_list.pop())
+    return tmp_list1
+
 
 #read all lines from .txt
 def parser(program):
@@ -77,6 +106,9 @@ def parser(program):
     tmp_list = []
     for line in fd.readlines():
         tmp_line = line.strip('\n').split()
+        if ('PRINT' in tmp_line):
+            tmp_line=treat_print_statement(tmp_line)
+
         if (tmp_line!=[]):
             tmp_list.append(tmp_line)
             command[name_of_programs[p_id]] = tmp_list
@@ -181,6 +213,15 @@ def run_command(name_of_program,command_list,pc):
         label = memory[name_of_program][command_list[1]]
         pc=BRA(label,name_of_program)
         insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='SLEEP'):
+        var = var_or_value(name_of_program,command_list[1])
+        SLEEP(var)
+        insert_to_mem(name_of_program,'pc',pc+1)
+    elif(command_list[0]=='PRINT'):
+        string = command_list[1]
+        var = var_or_value(name_of_program,command_list[2].strip('{').strip('}'))
+        PRINT(string,var)
+        insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='RETURN'):
         RETURN(name_of_program)
         global program_terminate
@@ -206,7 +247,6 @@ def main():
         while(program_terminate==False):
             program_counter = memory[name_of_programs[p_id]]['pc']
             run_command(name_of_programs[p_id],command[name_of_programs[p_id]][program_counter],program_counter)
-            print(memory)
 
         program_terminate=False
 
