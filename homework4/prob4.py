@@ -119,6 +119,7 @@ def parser(program):
     tmp_list = []
     for line in fd.readlines():
         tmp_line = line.strip('\n').split()
+        
         if ('PRINT' in tmp_line):
             tmp_line=treat_print_statement(tmp_line)
 
@@ -173,6 +174,11 @@ def var_or_value(name_of_program,variable):
         return int(variable)
 
 def run_command(name_of_program,command_list,pc):
+    
+    #check for typo
+    if (command_list[0] not in list_of_commands):
+        print("Wrong Command at line: "+str(pc+1))
+        quit()
 
     command_list = check_array_index(name_of_program,command_list)
     
@@ -239,7 +245,7 @@ def run_command(name_of_program,command_list,pc):
         var1 = var_or_value(name_of_program,command_list[1])
         var2 = var_or_value(name_of_program,command_list[2])
         label = memory[name_of_program][command_list[3]]
-        BREQ(var1,var2,label,pc,name_of_program)
+        pc=BREQ(var1,var2,label,pc,name_of_program)
         insert_to_mem(name_of_program,'pc',pc)
     elif(command_list[0]=='BRA'):
         label = memory[name_of_program][command_list[1]]
@@ -265,13 +271,14 @@ def run_command(name_of_program,command_list,pc):
         RETURN(name_of_program)
         global program_terminate
         program_terminate=True
-        
-def arguments(args):
+
+def arguments(args,pid):
 
     argc=len(args)
     SET('$argc',argc,args[0])
+    SET('$argv[0]',pid,args[0])
 
-    for i in range(0,argc):
+    for i in range(1,argc):
         argv = '$argv'+'['+str(i)+']'
         SET(argv,args[i],args[0])
 
@@ -285,19 +292,19 @@ def main():
             #read the code
             exec_input = input('exec> ').split()
             file_code = exec_input[0]+'.txt'
-            print(file_code)
 
-            arguments(exec_input)
 
             parser(file_code)
      
             p_id = name_of_programs.index(file_code.split('.')[0])
+            arguments(exec_input,p_id)
             find_labels(name_of_programs[p_id])
             insert_to_mem(name_of_programs[p_id],'pc',0)
 
         while(program_terminate==False):
             program_counter = memory[name_of_programs[p_id]]['pc']
             run_command(name_of_programs[p_id],command[name_of_programs[p_id]][program_counter],program_counter)
+        
         program_terminate=False
 
 global program_terminate
