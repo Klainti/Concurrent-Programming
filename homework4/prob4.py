@@ -140,6 +140,23 @@ def find_labels(name_of_program):
             #remove label from commands
             command[name_of_program][i].pop(0)
 
+#Support array index.Save in memory like a variable.Like 'array[3]'
+# not like 'array[i]' where i =3
+def check_array_index(name_of_program,command_list):
+    
+    for item in command_list:
+        if (command_list[0]=='PRINT' and command_list.index(item)==1):
+            continue
+
+        if ('[' in item):
+            first_array = item[0:item.index('[')]
+            index = item[item.index('[')+1:item.index(']')]
+            index_value = str(var_or_value(name_of_program,index))
+            new_index = first_array+'['+index_value+']'
+            command_list[command_list.index(item)] = new_index
+    
+    return command_list
+
 #insert variable and their values to memory
 def insert_to_mem(name_of_program,key_var,value):
     if (name_of_program in memory.keys()):
@@ -156,6 +173,8 @@ def var_or_value(name_of_program,variable):
         return int(variable)
 
 def run_command(name_of_program,command_list,pc):
+
+    command_list = check_array_index(name_of_program,command_list)
     
     if (command_list[0]=='ADD'):
         var_name = command_list[1]
@@ -250,10 +269,10 @@ def run_command(name_of_program,command_list,pc):
 def arguments(args):
 
     argc=len(args)
-    SET('argc',argc,args[0])
+    SET('$argc',argc,args[0])
 
     for i in range(0,argc):
-        argv = 'argv'+'['+str(i)+']'
+        argv = '$argv'+'['+str(i)+']'
         SET(argv,args[i],args[0])
 
 
