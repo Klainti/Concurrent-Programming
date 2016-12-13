@@ -88,4 +88,13 @@ def RETURN(name_of_program):
     name_of_programs.pop(name_of_programs.index(name_of_program))
     return None
 
+def DOWN(sem,pc):
+    
+    if (sem!=0):
+        sem = sem - 1
+        return pc+1
+    else:
+        return pc
 
+def UP(sem):
+    sem = sem + 1

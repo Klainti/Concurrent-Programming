@@ -95,7 +95,15 @@ def run_command(name_of_program,command_list,pc):
     elif(command_list[0]=='STORE'):
         var = var_or_value(name_of_program,command_list[2])
         STORE(command_list[1],var)
-        insert_to_mem(name_of_program,'pc',pc+1)       
+        insert_to_mem(name_of_program,'pc',pc+1)
+    elif(command_list[0]=='DOWN'):
+        sem = global_memory[command_list[1]]
+        pc = DOWN(sem,pc)
+        insert_to_mem(name_of_program,'pc',pc)
+    elif(command_list[0]=='UP'):
+        sem = global_memory[command_list[1]]
+        UP(sem)
+        insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='RETURN'):
         RETURN(name_of_program)
 
