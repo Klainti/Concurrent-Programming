@@ -107,12 +107,12 @@ def run_command(name_of_program,command_list,pc):
     elif(command_list[0]=='RETURN'):
         RETURN(name_of_program)
 
-def arguments(args,pid):
+def arguments(args,p_id):
 
     argc=len(args)
-    SET('$argc',argc,args[0])
-    SET('$argv[0]',pid,args[0])
+    SET('$argc',argc,p_id)
+    SET('$argv[0]',p_id,p_id)
 
     for i in range(1,argc):
         argv = '$argv'+'['+str(i)+']'
-        SET(argv,args[i],args[0])
+        SET(argv,args[i],p_id)

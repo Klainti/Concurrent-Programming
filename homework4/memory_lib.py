@@ -5,7 +5,6 @@ list_of_commands = ['LOAD','STORE','SET','ADD','SUB','MUL','DIV','MOD','BRGT',
         'BRGE','BRLT','BRLE','BREQ','BRA','DOWN','UP','SLEEP','PRINT','RETURN']
 
 command={}
-name_of_programs = []
 
 """This function is useful for print command
 remove " from string and return a list with print command
@@ -24,7 +23,7 @@ def treat_print_statement(tmp_list):
 
 
 #read all lines from .txt
-def parser(program):
+def parser(program,p_id):
     global command
 
     fd = open(program,'r')
@@ -33,8 +32,6 @@ def parser(program):
     is_program = fd.readline().strip('\n') 
     if (is_program!='#PROGRAM'):
         quit()
-
-    name_of_programs.append(program)
  
     #split each line of the program 
     tmp_list = []
@@ -46,7 +43,7 @@ def parser(program):
 
         if (tmp_line!=[]):
             tmp_list.append(tmp_line)
-            command[program] = tmp_list
+            command[p_id] = tmp_list
 
 
 

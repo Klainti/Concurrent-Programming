@@ -85,7 +85,6 @@ def STORE(global_var_name,var_val):
 def RETURN(name_of_program):
     del memory[name_of_program]
     del command[name_of_program]
-    name_of_programs.pop(name_of_programs.index(name_of_program))
     return None
 
 def DOWN(sem,pc):
