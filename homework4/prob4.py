@@ -2,17 +2,18 @@ from run_lib import *
 from memory_lib import *
 import threading
 from time import sleep
+import sys
 
 
 ################################################################################
 
 
 
+#threads runnings programs
 def worker():
 
     name = threading.current_thread().getName()
     while(1):
-        sleep(10)
         for program in program_to_run[name]:
             program_counter= memory[program]['pc']
             current_command = command[program][program_counter]
@@ -22,17 +23,14 @@ def worker():
             if (current_command[0]=='RETURN'):
                 program_to_run[name].remove(program)
                 state[program]='DONE'
-                print(program_to_run)
-
-            
-
-
-
-
+           
+#wait for user to give a program,assign it to workers!
 def interpreter():
-    interpreter_mode = ['EXIT','STATE']
-    i=0
+    interpreter_mode = ['EXIT','STATE','KILL']
+    total_threads=0
+    max_threads = int(sys.argv[1])
     p_id=-1
+    reach_max_threads=False
 
     while(1):
         exec_input = input('exec> ').split()
@@ -45,30 +43,34 @@ def interpreter():
             parser(file_code,p_id)
 
             state[p_id]='Blocked'
-            pid_to_name[p_id]=exec_input[0]
-
-            print(state)
-            print(pid_to_name)
 
             arguments(exec_input,p_id)
             find_labels(p_id)
             insert_to_mem(p_id,'pc',0)
+            
+            #reach maximum threads .Restart total threads!
+            if (total_threads==max_threads):
+                total_threads=0
+                reach_max_threads = True
 
-            thread_name = 'Thread-'+str(i)
+            thread_name = 'Thread-'+str(total_threads)
+            total_threads +=1
        
             if (thread_name in program_to_run.keys()):
                 program_to_run[thread_name].append(p_id)
             else:
                 program_to_run[thread_name]=[p_id]
-
-            t = threading.Thread(name=thread_name,target=worker)
-            t.start()
+    
+            pid_to_name[p_id]=[exec_input[0],thread_name]
+            #create new thread!
+            if (reach_max_threads==False):
+                t = threading.Thread(name=thread_name,target=worker)
+                t.start()
 
         elif (exec_input[0]=='STATE'):
-            print("{:10} {:10} {:10}".format('Pid','Name','STATE'))
+            print("{:10} {:10} {:10}".format('Pid','Name','Thread','STATE'))
             for key in pid_to_name.keys():
-                print("{:10} {:10} {:10}".format(str(key),pid_to_name[key],state[key]))
-
+                print("{:10} {:10} {:10} {:10}".format(str(key),pid_to_name[key][0],pid_to_name[key][1],state[key]))
 
 state={}
 pid_to_name={}

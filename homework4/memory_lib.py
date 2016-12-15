@@ -27,7 +27,6 @@ def parser(program,p_id):
     global command
 
     fd = open(program,'r')
-    program = program.split('.')[0]
 
     is_program = fd.readline().strip('\n') 
     if (is_program!='#PROGRAM'):
