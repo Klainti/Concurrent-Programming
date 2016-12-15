@@ -72,6 +72,15 @@ def interpreter():
             for key in pid_to_name.keys():
                 print("{:10} {:10} {:10} {:10}".format(str(key),pid_to_name[key][0],pid_to_name[key][1],state[key]))
 
+        elif (exec_input[0]=='KILL'):
+            exec_input[1] = int(exec_input[1])
+            name_of_thread = 'Thread-'+ str(exec_input[1]%max_threads)
+            if (exec_input[1] in program_to_run[name_of_thread]):
+                program_to_run[name_of_thread].remove(exec_input[1])
+                print(program_to_run)
+                state[exec_input[1]]='KILLED'
+
+
 state={}
 pid_to_name={}
 program_to_run = {}
