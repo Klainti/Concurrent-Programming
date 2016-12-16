@@ -97,12 +97,12 @@ def run_command(name_of_program,command_list,pc):
         STORE(command_list[1],var)
         insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='DOWN'):
-        sem = read_from_global_mem([command_list[1]])
-        pc = DOWN(sem,pc)
+        sem_value = read_from_global_mem(command_list[1])
+        pc = DOWN(command_list[1],sem_value,pc)
         insert_to_mem(name_of_program,'pc',pc)
     elif(command_list[0]=='UP'):
-        sem = read_from_global_mem([command_list[1]])
-        UP(sem)
+        sem_value = read_from_global_mem(command_list[1])
+        UP(command_list[1],sem_value)
         insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='RETURN'):
         RETURN(name_of_program)

@@ -93,7 +93,8 @@ def insert_to_global_mem(key_var,value):
 def read_from_global_mem(key_var):
     global global_memory
         
-    return global_memory[key_var]
+    value = global_memory[key_var]
+    return value
 
 #check if variable is in memory or raw value from .txt
 def var_or_value(name_of_program,variable):

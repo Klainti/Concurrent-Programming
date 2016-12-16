@@ -87,13 +87,15 @@ def RETURN(name_of_program):
     del command[name_of_program]
     return None
 
-def DOWN(sem,pc):
+def DOWN(sem_name,sem_value,pc):
     
-    if (sem!=0):
-        sem = sem - 1
+    if (sem_value!=0):
+        sem_value = sem_value - 1
+        insert_to_global_mem(sem_name,sem_value)
         return pc+1
     else:
         return pc
 
-def UP(sem):
-    sem = sem + 1
+def UP(sem_name,sem_value):
+    sem_value = sem_value + 1
+    insert_to_global_mem(sem_name,sem_value)

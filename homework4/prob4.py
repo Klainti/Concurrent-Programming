@@ -16,8 +16,8 @@ def worker():
             program_counter= memory[program]['pc']
             current_command = command[program][program_counter]
             state[program]='RUNNING'
-            print(state)
             run_command(program,current_command,program_counter)
+            print(global_memory)
             state[program]='BLOCKED'
             if (current_command[0]=='RETURN'):
                 program_to_run[name].remove(program)
@@ -78,7 +78,6 @@ def interpreter():
                 program_to_run[name_of_thread].remove(exec_input[1])
                 print(program_to_run)
                 state[exec_input[1]]='KILLED'
-
 
 state={}
 pid_to_name={}
