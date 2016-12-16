@@ -69,8 +69,16 @@ def SLEEP(var):
     time.sleep(var)
     return None
 
-def PRINT(string,var):
-    print(string + str(var))
+def PRINT(name_of_program,command_list):
+    string = command_list[1]
+
+    length_of_variables = len(command_list)
+
+    for i in range(2,length_of_variables):
+        value = var_or_value(name_of_program,command_list[i])
+        string = string +' '+ str(value)
+
+    print(string)
     return None
 
 def LOAD(var_name,global_var_name,name_of_program):

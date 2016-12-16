@@ -85,9 +85,7 @@ def run_command(name_of_program,command_list,pc):
         SLEEP(var)
         insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='PRINT'):
-        string = command_list[1]
-        var = var_or_value(name_of_program,command_list[2].strip('{').strip('}'))
-        PRINT(string,var)
+        PRINT(name_of_program,command_list)
         insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='LOAD'):
         LOAD(command_list[1],command_list[2],name_of_program)

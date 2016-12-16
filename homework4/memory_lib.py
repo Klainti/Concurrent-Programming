@@ -12,13 +12,15 @@ string without " and Varname"""
 def treat_print_statement(tmp_list):
     con_string = ''
     pointer1 = tmp_list.index('PRINT')+1
-    pointer2 = len(tmp_list)
-    for x in range(pointer1,pointer2-1):
+    pointer2 = tmp_list.index('"')
+    for x in range(pointer1,pointer2+1):
         con_string = con_string +' '+ tmp_list[x]
 
     tmp_list1= tmp_list[0:tmp_list.index('PRINT')+1]
     tmp_list1.append(con_string[2:len(con_string)-1])
-    tmp_list1.append(tmp_list.pop())
+    for item in tmp_list[pointer2+1:]:
+        tmp_list1.append(item)
+
     return tmp_list1
 
 
