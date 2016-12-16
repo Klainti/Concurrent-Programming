@@ -74,12 +74,12 @@ def PRINT(string,var):
     return None
 
 def LOAD(var_name,global_var_name,name_of_program):
-    global_value = global_memory[global_var_name]
+    global_value = read_from_global_mem(global_var_name)
     SET(var_name,global_value,name_of_program)
     return None
 
 def STORE(global_var_name,var_val):
-    global_memory[global_var_name] = var_val
+    insert_to_global_mem(global_var_name,var_val)
     return None
 
 def RETURN(name_of_program):

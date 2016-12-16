@@ -3,8 +3,6 @@ from memory_lib import *
 import threading
 from time import sleep
 import sys
-
-
 ################################################################################
 
 
@@ -18,6 +16,7 @@ def worker():
             program_counter= memory[program]['pc']
             current_command = command[program][program_counter]
             state[program]='RUNNING'
+            print(state)
             run_command(program,current_command,program_counter)
             state[program]='BLOCKED'
             if (current_command[0]=='RETURN'):
