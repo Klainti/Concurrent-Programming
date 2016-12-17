@@ -1,7 +1,6 @@
 import threading
 import time
 
-
 lock = threading.Lock()
 #Initialize memory !
 memory = {}
@@ -17,7 +16,11 @@ string without " and Varname"""
 def treat_print_statement(tmp_list):
     con_string = ''
     pointer1 = tmp_list.index('PRINT')+1
-    pointer2 = tmp_list.index('"')
+
+    for i in range(pointer1,len(tmp_list)):
+        if ('"' in tmp_list[i]):
+            pointer2 = i
+
     for x in range(pointer1,pointer2+1):
         con_string = con_string +' '+ tmp_list[x]
 
