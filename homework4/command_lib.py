@@ -66,7 +66,6 @@ def BRA(label,name_of_program):
     return label
 
 def SLEEP(var):
-    time.sleep(var)
     return None
 
 def PRINT(name_of_program,command_list):

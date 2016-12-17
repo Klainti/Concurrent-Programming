@@ -1,3 +1,8 @@
+import threading
+import time
+
+
+lock = threading.Lock()
 #Initialize memory !
 memory = {}
 global_memory = {}
@@ -89,13 +94,19 @@ def insert_to_mem(name_of_program,key_var,value):
 
 def insert_to_global_mem(key_var,value):
     global global_memory
+    global lock
 
+    lock.acquire()
     global_memory[key_var]=value
+    lock.release()
 
 def read_from_global_mem(key_var):
     global global_memory
-        
+    global lock
+    
+    lock.acquire()
     value = global_memory[key_var]
+    lock.release()
     return value
 
 #check if variable is in memory or raw value from .txt
