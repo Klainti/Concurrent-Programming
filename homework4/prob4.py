@@ -1,19 +1,15 @@
+import threading
+from time import * 
+from tkinter import *
 from run_lib import *
 from memory_lib import *
-import threading
-from time import sleep,time
 import sys
-
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 ################################################################################
 
 #check for a program if the sleeping time is passed
 def wake_up(name):
 
-    end_time = time()
+    end_time = time.time()
 
     for i in range (len(program_to_run[name])):
         run_lock.acquire()
@@ -31,7 +27,7 @@ def terminate():
 
 #threads runnings programs
 def worker():
-
+    global window_output
     name = threading.current_thread().getName()
     while(1):
         terminate()
@@ -50,7 +46,7 @@ def worker():
             mtx.acquire()
             state[program]='RUNNING'
             mtx.release()
-            run_command(program,current_command,program_counter)
+            run_command(program,current_command,program_counter,window_output)
             mtx.acquire()
             state[program]='BLOCKED'
             mtx.release()
@@ -62,11 +58,12 @@ def worker():
                 state[program]='DONE'
                 mtx.release()
             elif (current_command[0]=='SLEEP'):
-                sleeping_program[program]= [var_or_value(program,current_command[1]),time()]
+                sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()]
                 state[program]='SLEEP'
 
 #wait for user to give a program,assign it to workers!
 def interpreter():
+    
     interpreter_mode = ['EXIT','STATE','KILL']
     total_threads=0
     max_threads = int(sys.argv[1])
@@ -85,7 +82,7 @@ def interpreter():
 
             state[p_id]='Blocked'
 
-            arguments(exec_input,p_id)
+            insert_arguments(exec_input,p_id)
             find_labels(p_id)
             insert_to_mem(p_id,'pc',0)
             
@@ -111,13 +108,9 @@ def interpreter():
 
         elif (exec_input[0]=='STATE'):
             mtx.acquire()
-            write_to_file = open('output.txt','a')
-            write_to_file.write("{:10} {:10} {:10}\n".format('Pid','Name','Thread','STATE'))
-            logging.info("{:10} {:10} {:10}\n".format('Pid','Name','Thread','STATE'))
+            print("{:10} {:10} {:10}\n".format('Pid','Name','Thread','STATE'))
             for key in pid_to_name.keys():
-                write_to_file.write("{:10} {:10} {:10} {:10}\n".format(str(key),pid_to_name[key][0],pid_to_name[key][1],state[key]))
-                logging.info("{:10} {:10} {:10} {:10}\n".format(str(key),pid_to_name[key][0],pid_to_name[key][1],state[key]))
-            write_to_file.close()
+                print("{:10} {:10} {:10} {:10}\n".format(str(key),pid_to_name[key][0],pid_to_name[key][1],state[key]))
             mtx.release()
 
         elif (exec_input[0]=='KILL'):
@@ -134,10 +127,17 @@ def interpreter():
             terminate_threads= True
             for thread in thread_list:
                 thread.join()
-            logging.info('Bye :)')
-            quit()
+            print('Bye :)')
+            return None
 
 
+#unblock from root.mainloop()
+def mainloop_quit():
+    global root
+    root.quit()
+
+
+#initialize structures !
 terminate_threads = False
 thread_list = []
 run_lock = threading.Lock()
@@ -146,4 +146,19 @@ sleeping_program = {}
 state={}
 pid_to_name={}
 program_to_run = {}
-interpreter()
+
+
+#Create a window for programs output!
+root = Tk()
+window_output = Text(root)
+root.title("When you are bored as hell!")
+Label(text='Program Output').pack()
+window_output.pack()
+Button(root, text="Quit", command=mainloop_quit).pack()
+
+interpreter_thread = threading.Thread(target=interpreter)
+interpreter_thread.start()
+
+root.mainloop()
+
+interpreter_thread.join()

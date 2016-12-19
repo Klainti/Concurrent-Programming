@@ -1,5 +1,9 @@
 from memory_lib import *
 import time
+from tkinter import *
+import threading
+
+window_mtx = threading.Lock()
 
 
 def ADD(var_name,var1,var2,name_of_program):
@@ -68,7 +72,7 @@ def BRA(label,name_of_program):
 def SLEEP(var):
     return None
 
-def PRINT(name_of_program,command_list):
+def PRINT(name_of_program,command_list,window_output):
     string = command_list[1]
 
     length_of_variables = len(command_list)
@@ -77,7 +81,10 @@ def PRINT(name_of_program,command_list):
         value = var_or_value(name_of_program,command_list[i])
         string = string +' '+ str(value)
 
-    print(string)
+    window_mtx.acquire()
+    window_output.insert(INSERT,string+'\n')
+    window_output.see("end")
+    window_mtx.release()
     return None
 
 def LOAD(var_name,global_var_name,name_of_program):

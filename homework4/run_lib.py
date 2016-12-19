@@ -1,8 +1,9 @@
 from memory_lib import *
 from command_lib import *
+from tkinter import *
 
 
-def run_command(name_of_program,command_list,pc):
+def run_command(name_of_program,command_list,pc,window_output):
     
     #check for typo
     if (command_list[0] not in list_of_commands):
@@ -85,7 +86,7 @@ def run_command(name_of_program,command_list,pc):
         SLEEP(var)
         insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='PRINT'):
-        PRINT(name_of_program,command_list)
+        PRINT(name_of_program,command_list,window_output)
         insert_to_mem(name_of_program,'pc',pc+1)
     elif(command_list[0]=='LOAD'):
         LOAD(command_list[1],command_list[2],name_of_program)
@@ -105,7 +106,7 @@ def run_command(name_of_program,command_list,pc):
     elif(command_list[0]=='RETURN'):
         RETURN(name_of_program)
 
-def arguments(args,p_id):
+def insert_arguments(args,p_id):
 
     argc=len(args)
     SET('$argc',argc,p_id)
