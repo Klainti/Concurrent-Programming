@@ -17,7 +17,9 @@ def wake_up(name):
         run_lock.release()
         if (state[program]=='SLEEP'):
             if (end_time-sleeping_program[program][1]>=sleeping_program[program][0]):
+                mtx.acquire()
                 state[program]='BLOCKED'
+                mtx.release()
 
 def terminate():
     global terminate_threads
@@ -58,8 +60,10 @@ def worker():
                 state[program]='DONE'
                 mtx.release()
             elif (current_command[0]=='SLEEP'):
-                sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()]
+                sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()] 
+                mtx.acquire()
                 state[program]='SLEEP'
+                mtx.release()
 
 #wait for user to give a program,assign it to workers!
 def interpreter():
@@ -120,7 +124,9 @@ def interpreter():
                 run_lock.acquire()
                 program_to_run[name_of_thread].remove(exec_input[1])
                 run_lock.release()
+                mtx.acquire()
                 state[exec_input[1]]='KILLED'
+                mtx.release()
 
         else:
             global terminate_threads
