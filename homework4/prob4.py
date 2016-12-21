@@ -33,10 +33,14 @@ def change_state(program,new_state):
     #debug = open('states.txt','a')
 
     state_lock.acquire()
-    if (state[program]!='KILLED' or state[program]!='DONE'):
+    if (state[program] == 'KILLED'):
+        print('State of program is KILLED')
+    elif (state[program]!='DONE'):
         state[program]=new_state
         #debug.write(str(state))
         #debug.write('\n')
+    if (state[program] == 'KILLED'):
+        print('State of program is KILLED')
 
     #debug.close()
     state_lock.release()
@@ -105,6 +109,8 @@ def interpreter():
 
     while(1):
         exec_input = input('exec> ').split()
+        if (not exec_input):
+            continue
 
         if (exec_input[0] not in interpreter_mode):
 
@@ -149,18 +155,21 @@ def interpreter():
             state_lock.release()
 
         elif (exec_input[0]=='KILL'):
-            exec_input[1] = int(exec_input[1])
-            name_of_thread = 'Thread-'+ str(exec_input[1]%max_threads)
-            if (exec_input[1] in program_to_run[name_of_thread]):
-                remove_program(name_of_thread,exec_input[1])
-                change_state(exec_input[1],'KILLED')
+            if (len(exec_input) == 2):
+                exec_input[1] = int(exec_input[1])
+                name_of_thread = 'Thread-'+ str(exec_input[1]%max_threads)
+                if (exec_input[1] in program_to_run[name_of_thread]):
+                    remove_program(name_of_thread,exec_input[1])
+                    change_state(exec_input[1],'KILLED')
+            else:
+                print ('You forgot to pass as argument the pid of the program')
 
         else:
             global terminate_threads
             terminate_threads= True
             for thread in thread_list:
                 thread.join()
-            print('Bye :)')
+            print('Bye ♪~ ᕕ(ᐛ)ᕗ')
             return None
 
 
