@@ -1,5 +1,6 @@
 import threading
 import time
+from os import listdir
 
 lock = threading.Lock()
 #Initialize memory !
@@ -39,7 +40,9 @@ def parser(program,p_id):
     try:
         fd = open(program,'r')
     except FileNotFoundError:
-        print("No such program in current folder!")
+        print('No such program in current folder!')
+        print('ls-->'+str(listdir()))
+        print('Try again please!')
         quit()
 
     is_program = fd.readline().strip('\n') 
