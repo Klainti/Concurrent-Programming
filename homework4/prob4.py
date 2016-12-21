@@ -4,22 +4,56 @@ from tkinter import *
 from run_lib import *
 from memory_lib import *
 import sys
+from random import randint
 ################################################################################
+
+def next_program(name):
+    run_lock.acquire()
+
+    length = len(program_to_run[name])
+
+    if (length>=1):
+        
+        #list starts from 0-position!
+        index = randint(0,length-1)
+
+        run_lock.release()
+        return program_to_run[name][index]
+
+    run_lock.release()
+    return None
+
+def remove_program(name,program):
+
+    run_lock.acquire()
+    program_to_run[name].remove(program)
+    run_lock.release() 
+
+def change_state(program,new_state):
+    #debug = open('states.txt','a')
+
+    state_lock.acquire()
+    if (state[program]!='KILLED' or state[program]!='DONE'):
+        state[program]=new_state
+        #debug.write(str(state))
+        #debug.write('\n')
+
+    #debug.close()
+    state_lock.release()
+
+
 
 #check for a program if the sleeping time is passed
 def wake_up(name):
 
     end_time = time.time()
-
-    for i in range (len(program_to_run[name])):
-        run_lock.acquire()
-        program = program_to_run[name][i]
-        run_lock.release()
+        
+    for program in program_to_run[name]:
         if (state[program]=='SLEEP'):
             if (end_time-sleeping_program[program][1]>=sleeping_program[program][0]):
-                mtx.acquire()
-                state[program]='BLOCKED'
-                mtx.release()
+                change_state(program,'BLOCKED')
+
+
 
 def terminate():
     global terminate_threads
@@ -33,38 +67,33 @@ def worker():
     name = threading.current_thread().getName()
     while(1):
         terminate()
-        for i in range (len(program_to_run[name])):
 
-            run_lock.acquire()
-            program = program_to_run[name][i]
-            run_lock.release()
+        program=next_program(name)
+        
+        #there is no program to run 
+        if (program==None):
+            continue
+            
+        wake_up(name)
+        if (state[program]=='SLEEP'):
+            continue
 
-            wake_up(name)
-            if (state[program]=='SLEEP'):
-                continue
+        program_counter= memory[program]['pc']
+        current_command = command[program][program_counter]
+        change_state(program,'RUNNING')
 
-            program_counter= memory[program]['pc']
-            current_command = command[program][program_counter]
-            mtx.acquire()
-            state[program]='RUNNING'
-            mtx.release()
-            run_command(program,current_command,program_counter,window_output)
-            mtx.acquire()
-            state[program]='BLOCKED'
-            mtx.release()
-            if (current_command[0]=='RETURN'):
-                run_lock.acquire()
-                program_to_run[name].remove(program)
-                run_lock.release()
-                mtx.acquire()
-                state[program]='DONE'
-                mtx.release()
-            elif (current_command[0]=='SLEEP'):
-                sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()] 
-                mtx.acquire()
-                state[program]='SLEEP'
-                mtx.release()
+        run_command(program,current_command,program_counter,window_output)
 
+        
+        change_state(program,'BLOCKED')
+
+        if (current_command[0]=='RETURN'):
+            remove_program(name,program)
+            change_state(program,'DONE')
+        elif (current_command[0]=='SLEEP'):
+            sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()] 
+            change_state(program,'SLEEP')
+    
 #wait for user to give a program,assign it to workers!
 def interpreter():
     
@@ -76,7 +105,7 @@ def interpreter():
 
     while(1):
         exec_input = input('exec> ').split()
-    
+
         if (exec_input[0] not in interpreter_mode):
 
             file_code = exec_input[0]+'.txt'
@@ -84,7 +113,7 @@ def interpreter():
             p_id = p_id+1
             parser(file_code,p_id)
 
-            state[p_id]='Blocked'
+            state[p_id]='BLOCKED'
 
             insert_arguments(exec_input,p_id)
             find_labels(p_id)
@@ -98,10 +127,12 @@ def interpreter():
             thread_name = 'Thread-'+str(total_threads)
             total_threads +=1
        
+            run_lock.acquire()
             if (thread_name in program_to_run.keys()):
                 program_to_run[thread_name].append(p_id)
             else:
                 program_to_run[thread_name]=[p_id]
+            run_lock.release()
     
             pid_to_name[p_id]=[exec_input[0],thread_name]
             #create new thread!
@@ -111,22 +142,18 @@ def interpreter():
                 t.start()
 
         elif (exec_input[0]=='STATE'):
-            mtx.acquire()
+            state_lock.acquire()
             print("{:10} {:10} {:10}\n".format('Pid','Name','Thread','STATE'))
             for key in pid_to_name.keys():
                 print("{:10} {:10} {:10} {:10}\n".format(str(key),pid_to_name[key][0],pid_to_name[key][1],state[key]))
-            mtx.release()
+            state_lock.release()
 
         elif (exec_input[0]=='KILL'):
             exec_input[1] = int(exec_input[1])
             name_of_thread = 'Thread-'+ str(exec_input[1]%max_threads)
             if (exec_input[1] in program_to_run[name_of_thread]):
-                run_lock.acquire()
-                program_to_run[name_of_thread].remove(exec_input[1])
-                run_lock.release()
-                mtx.acquire()
-                state[exec_input[1]]='KILLED'
-                mtx.release()
+                remove_program(name_of_thread,exec_input[1])
+                change_state(exec_input[1],'KILLED')
 
         else:
             global terminate_threads
@@ -147,7 +174,7 @@ def mainloop_quit():
 terminate_threads = False
 thread_list = []
 run_lock = threading.Lock()
-mtx = threading.Lock()
+state_lock = threading.Lock()
 sleeping_program = {}
 state={}
 pid_to_name={}
