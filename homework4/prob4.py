@@ -28,23 +28,17 @@ def remove_program(name,program):
     run_lock.acquire()
     program_to_run[name].remove(program)
     run_lock.release() 
+    return None
 
 def change_state(program,new_state):
-    #debug = open('states.txt','a')
 
     state_lock.acquire()
     if (state[program] == 'KILLED'):
         print('State of program is KILLED')
     elif (state[program]!='DONE'):
         state[program]=new_state
-        #debug.write(str(state))
-        #debug.write('\n')
-    if (state[program] == 'KILLED'):
-        print('State of program is KILLED')
-
-    #debug.close()
     state_lock.release()
-
+    return None
 
 
 #check for a program if the sleeping time is passed
@@ -82,22 +76,25 @@ def worker():
         if (state[program]=='SLEEP'):
             continue
 
-        program_counter= memory[program]['pc']
-        current_command = command[program][program_counter]
-        change_state(program,'RUNNING')
+        #change running program each argv[2] lines!
+        for _ in range(int(sys.argv[2])):
+            program_counter= memory[program]['pc']
+            current_command = command[program][program_counter]
+            change_state(program,'RUNNING')
 
-        run_command(program,current_command,program_counter,window_output)
-
+            run_command(program,current_command,program_counter,window_output)
         
-        change_state(program,'BLOCKED')
+            if (current_command[0]=='RETURN'):
+                remove_program(name,program)
+                change_state(program,'DONE')
+                break
+            elif (current_command[0]=='SLEEP'):
+                sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()] 
+                change_state(program,'SLEEP')
+                break
 
-        if (current_command[0]=='RETURN'):
-            remove_program(name,program)
-            change_state(program,'DONE')
-        elif (current_command[0]=='SLEEP'):
-            sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()] 
-            change_state(program,'SLEEP')
-    
+        change_state(program,'BLOCKED')
+        
 #wait for user to give a program,assign it to workers!
 def interpreter():
     
@@ -158,9 +155,12 @@ def interpreter():
             if (len(exec_input) == 2):
                 exec_input[1] = int(exec_input[1])
                 name_of_thread = 'Thread-'+ str(exec_input[1]%max_threads)
-                if (exec_input[1] in program_to_run[name_of_thread]):
-                    remove_program(name_of_thread,exec_input[1])
-                    change_state(exec_input[1],'KILLED')
+                try:
+                    if (exec_input[1] in program_to_run[name_of_thread]):
+                        remove_program(name_of_thread,exec_input[1])
+                        change_state(exec_input[1],'KILLED')
+                except KeyError:
+                    print("There is nothing to kill!")
             else:
                 print ('You forgot to pass as argument the pid of the program')
 
@@ -177,6 +177,11 @@ def interpreter():
 def mainloop_quit():
     global root
     root.quit()
+
+
+if (len(sys.argv)!=3):
+    print("Give number of threads and lines to run before alternation of program")
+    quit()
 
 
 #initialize structures !

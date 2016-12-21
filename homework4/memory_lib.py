@@ -36,7 +36,11 @@ def treat_print_statement(tmp_list):
 def parser(program,p_id):
     global command
 
-    fd = open(program,'r')
+    try:
+        fd = open(program,'r')
+    except FileNotFoundError:
+        print("No such program in current folder!")
+        quit()
 
     is_program = fd.readline().strip('\n') 
     if (is_program!='#PROGRAM'):
