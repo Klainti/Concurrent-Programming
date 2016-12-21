@@ -1,8 +1,7 @@
 #PROGRAM
-	BREQ $argc 3 LABEL
-	PRINT "Wrong number of arguments "
+	BREQ $argc 3 LOOP
+	PRINT "Wrong number of arguments"
 	RETURN
-LABEL STORE $out 0
 LOOP	PRINT "Consumer: down full " $argv[0]
 	DOWN $full
 	PRINT "Consumer: get " $argv[0]

@@ -76,6 +76,7 @@ def worker():
         if (state[program]=='SLEEP'):
             continue
 
+
         #change running program each argv[2] lines!
         for _ in range(int(sys.argv[2])):
             program_counter= memory[program]['pc']
@@ -83,17 +84,18 @@ def worker():
             change_state(program,'RUNNING')
 
             run_command(program,current_command,program_counter,window_output)
-        
+            
+            change_state(program,'BLOCKED')
+
             if (current_command[0]=='RETURN'):
                 remove_program(name,program)
                 change_state(program,'DONE')
                 break
+
             elif (current_command[0]=='SLEEP'):
                 sleeping_program[program]= [var_or_value(program,current_command[1]),time.time()] 
                 change_state(program,'SLEEP')
                 break
-
-        change_state(program,'BLOCKED')
         
 #wait for user to give a program,assign it to workers!
 def interpreter():

@@ -1,9 +1,8 @@
 #PROGRAM
 	SET $item 0
-	BREQ $argc 3 LABEL
-	PRINT "Wrong number of arguments "
+	BREQ $argc 3 LOOP
+	PRINT "Wrong number of arguments"
 	RETURN
-LABEL STORE $in 0
 LOOP	ADD $item $item 1
 	PRINT "Producer: produce " $argv[0] $item
 	SLEEP $argv[2]
@@ -16,7 +15,7 @@ LOOP	ADD $item $item 1
     ADD $k $k 1
     MOD $k $k $argv[1]
 	STORE $in $k
-    UP $mtx
+	UP $mtx
 	PRINT "Producer: up full " $argv[0]
     UP $full
     BRA LOOP
