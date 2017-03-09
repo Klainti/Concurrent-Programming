@@ -17,4 +17,7 @@ Take the code of MandelCalc and implement in parallel.
 
 ![alt tag](http://i.imgur.com/bHYZEFO.png)
 
-1.3 Implement parallel quicksort
+1.3 Quicksort
+Implement a parallel and recursive edition of quicksort with threads!
+
+Programming in C, using pthreads library
