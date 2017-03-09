@@ -1,7 +1,8 @@
 # Assigment
 
 2.1 Calculation of fractals without spinning
-Change the program in previous assigment and implement the sync between thread with signal , not spinning
+
+Change the program in previous assigment and implement the synchronisation between thread with signal , not spinning
 
 2.2 Protocol for the traffic control on a narrow bridge ensuring 
 
